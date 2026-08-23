@@ -12,21 +12,21 @@ import type { PetpoojaPurchaseOrderWebhookPayload } from './types';
  * API. So the webhook is verified against the same ApiType.PURCHASE credentials
  * already configured, rather than a separate credential set.
  *
- * Petpooja's official API 8 (PO webhook) reference documents access_token/app_secret
- * as swapped in this specific payload — their example shows
- * `"access_token": "YOUR_APP_SECRET"` and `"app_secret": "YOUR_ACCESS_TOKEN"`.
- * Confirmed as real documented behavior, not a docs typo (previously only suspected —
- * see git history). app_key is NOT swapped. Both arrangements are accepted here so
- * this doesn't break if Petpooja ever corrects it on their end.
+ * Only app_secret is checked. Real PO webhook deliveries have been observed with
+ * app_key mismatched/placeholder and access_token blank, even though the PO data
+ * itself (payload.data) is complete and correct — so app_key/access_token aren't
+ * reliable enough to gate on. app_secret is still a genuine shared secret and is
+ * always present. It's checked against both credentials.appSecret and
+ * credentials.accessToken because Petpooja's official API 8 (PO webhook) reference
+ * documents access_token/app_secret as swapped in this specific payload — their
+ * example shows `"access_token": "YOUR_APP_SECRET"` and
+ * `"app_secret": "YOUR_ACCESS_TOKEN"` — so the real secret can legitimately land in
+ * either stored slot.
  */
 export async function verifyWebhookCredentials(payload: PetpoojaPurchaseOrderWebhookPayload): Promise<boolean> {
   const credentials = await resolveCredentials(ApiType.PURCHASE);
   if (!credentials) return false;
-  if (payload.app_key !== credentials.appKey) return false;
-
-  const swapped = payload.access_token === credentials.appSecret && payload.app_secret === credentials.accessToken;
-  const straight = payload.app_secret === credentials.appSecret && payload.access_token === credentials.accessToken;
-  return swapped || straight;
+  return payload.app_secret === credentials.appSecret || payload.app_secret === credentials.accessToken;
 }
 
 async function resolveVendorId(name: string | null): Promise<string | undefined> {
