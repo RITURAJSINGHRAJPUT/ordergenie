@@ -37,24 +37,3 @@ export async function resolveCredentials(apiType: ApiType): Promise<PetpoojaCred
 
   return null;
 }
-
-/**
- * Inbound PO webhook verification (purchaseOrderWebhook.service.ts) only needs to
- * confirm app_secret against a shared secret — unlike resolveCredentials's callers,
- * which place real outbound Petpooja API calls and genuinely need app_key/app_secret/
- * access_token together. Gating this on all three being saved (resolveCredentials'
- * requirement) meant a config row with only app_secret filled in — the realistic
- * state here, since access_token isn't reliably available for this integration —
- * returned null and every webhook 401'd regardless of the app_secret check. This
- * reads app_secret/access_token independently so either one being saved is enough.
- */
-export async function resolveWebhookSecrets(apiType: ApiType): Promise<string[]> {
-  const row = await prisma.petpoojaApiConfig.findUnique({ where: { apiType } });
-  const stored = [row?.appSecretEncrypted, row?.accessTokenEncrypted]
-    .filter((v): v is string => Boolean(v))
-    .map((v) => decrypt(v));
-  if (stored.length) return stored;
-
-  const fallback = ENV_FALLBACKS[apiType];
-  return [fallback?.appSecret, fallback?.accessToken].filter((v): v is string => Boolean(v));
-}

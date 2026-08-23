@@ -23,20 +23,16 @@ const OUTCOME_OPTIONS: { value: string; label: string }[] = [
   { value: 'REJECTED', label: 'Rejected' },
 ];
 
-const STATUS_OPTIONS = ['all', 'PENDING', 'CANCELLED', 'RECEIVED'];
-
 export function WebhookDeliveryLogTab() {
   const { outletId, customFrom, customTo, setOutletId } = useFilterStore();
   const { data: outlets } = useOutlets();
   const [outcome, setOutcome] = useState('all');
-  const [status, setStatus] = useState('all');
   const [search, setSearch] = useState('');
-  const [page, setPage] = useResettingPage(`${outcome}|${status}|${outletId}|${customFrom}|${customTo}|${search}`);
+  const [page, setPage] = useResettingPage(`${outcome}|${outletId}|${customFrom}|${customTo}|${search}`);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { data, isLoading, isError } = usePurchaseOrderWebhookLogs(page, 12, {
     outcome,
-    status,
     search: search || undefined,
   });
 
@@ -82,18 +78,6 @@ export function WebhookDeliveryLogTab() {
               {OUTCOME_OPTIONS.map((o) => (
                 <SelectItem key={o.value} value={o.value}>
                   {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={status} onValueChange={(v) => setStatus(v ?? 'all')}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              {STATUS_OPTIONS.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s === 'all' ? 'All Statuses' : s.replace('_', ' ')}
                 </SelectItem>
               ))}
             </SelectContent>

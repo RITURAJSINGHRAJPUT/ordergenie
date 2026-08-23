@@ -1,38 +1,8 @@
-import { ApiType, PurchaseOrderStatus } from '@prisma/client';
+import { PurchaseOrderStatus } from '@prisma/client';
 import { prisma } from '../../config/db';
 import { AppError } from '../../utils/apiResponse';
-import { resolveWebhookSecrets } from './credentials';
 import { isTransferWebhookRecord, mapPurchaseOrderWebhook } from './mappers/purchaseOrderWebhookMapper';
 import type { PetpoojaPurchaseOrderWebhookPayload } from './types';
-
-/**
- * Petpooja's Inventory API docs state credentials "remain constant for all API
- * calls" — confirmed against a real onboarding email (apidocs/apidocs.txt), which
- * shows the same app_key/app_secret/access_token used for the Purchase (get_purchase)
- * API. So the webhook is verified against the same ApiType.PURCHASE credentials
- * already configured, rather than a separate credential set.
- *
- * Only app_secret is checked. Real PO webhook deliveries have been observed with
- * app_key mismatched/placeholder and access_token blank, even though the PO data
- * itself (payload.data) is complete and correct — so app_key/access_token aren't
- * reliable enough to gate on. app_secret is still a genuine shared secret and is
- * always present. It's checked against both the stored app_secret and access_token
- * because Petpooja's official API 8 (PO webhook) reference documents access_token/
- * app_secret as swapped in this specific payload — their example shows
- * `"access_token": "YOUR_APP_SECRET"` and `"app_secret": "YOUR_ACCESS_TOKEN"` — so
- * the real secret can legitimately land in either stored slot.
- *
- * Uses resolveWebhookSecrets, not resolveCredentials — resolveCredentials refuses to
- * return anything unless app_key/app_secret/access_token are ALL saved (it's used for
- * real outbound API calls that need all three together), but the realistic state for
- * this integration is that only app_secret is ever configured. Gating on
- * resolveCredentials here meant every webhook 401'd regardless of this check.
- */
-export async function verifyWebhookCredentials(payload: PetpoojaPurchaseOrderWebhookPayload): Promise<boolean> {
-  if (!payload.app_secret) return false;
-  const secrets = await resolveWebhookSecrets(ApiType.PURCHASE);
-  return secrets.includes(payload.app_secret);
-}
 
 async function resolveVendorId(name: string | null): Promise<string | undefined> {
   if (!name) return undefined;

@@ -16,15 +16,23 @@ export interface WebhookLogInput {
   failureReason?: string | null;
 }
 
-const REDACTED = '[REDACTED]';
+// Shows only the last 4 characters (e.g. "***9b3e") — enough to visually compare
+// against a configured credential's known suffix when diagnosing a mismatched
+// webhook delivery, without exposing the full secret. Same convention as API key
+// previews in Stripe/GitHub. Full redaction previously made mismatches undiagnosable:
+// there was nothing to compare a rejected delivery's sent value against.
+function maskSecret(value: string): string {
+  if (value.length <= 4) return '*'.repeat(value.length);
+  return `***${value.slice(-4)}`;
+}
 
 function redactPayload(payload: unknown): unknown {
   if (!payload || typeof payload !== 'object') return payload;
   const p = payload as Record<string, unknown>;
   return {
     ...p,
-    app_secret: p.app_secret ? REDACTED : p.app_secret,
-    access_token: p.access_token ? REDACTED : p.access_token,
+    app_secret: typeof p.app_secret === 'string' && p.app_secret ? maskSecret(p.app_secret) : p.app_secret,
+    access_token: typeof p.access_token === 'string' && p.access_token ? maskSecret(p.access_token) : p.access_token,
   };
 }
 

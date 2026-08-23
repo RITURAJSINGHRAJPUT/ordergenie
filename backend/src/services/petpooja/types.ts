@@ -178,8 +178,11 @@ export interface PetpoojaPurchaseOrderWebhookData {
 
 export interface PetpoojaPurchaseOrderWebhookPayload {
   menuSharingCode: string;
-  app_key: string;
-  app_secret: string;
-  access_token: string;
+  // Petpooja confirmed they've removed these from the PO webhook push entirely —
+  // no longer sent, no longer verified (see petpoojaWebhook.controller.ts). Kept
+  // optional rather than deleted in case a stray/legacy delivery still includes them.
+  app_key?: string;
+  app_secret?: string;
+  access_token?: string;
   data: PetpoojaPurchaseOrderWebhookData;
 }
