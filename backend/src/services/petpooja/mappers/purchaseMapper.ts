@@ -82,6 +82,7 @@ function mapPurchaseItem(item: PetpoojaPurchaseItem): MappedPurchaseItem {
 export interface MappedPurchase {
   poNumber: string;
   petpoojaPurchaseId: string;
+  poId: string | null;
   invoiceNumber: string | null;
   orderDate: Date;
   petpoojaCreatedAt?: Date;
@@ -107,6 +108,7 @@ export function mapPetpoojaPurchase(record: PetpoojaPurchaseRecord): MappedPurch
   return {
     poNumber: reference?.trim() || `PO-${record.purchase_id}`,
     petpoojaPurchaseId: record.purchase_id,
+    poId: record.po_id ? String(record.po_id).trim() || null : null,
     invoiceNumber: record.invoice_number || null,
     orderDate: record.invoice_date
       ? parsePetpoojaDate(record.invoice_date)

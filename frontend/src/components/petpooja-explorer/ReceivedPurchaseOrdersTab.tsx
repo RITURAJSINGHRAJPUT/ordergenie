@@ -18,37 +18,46 @@ import { useFilterStore } from '@/store/filterStore';
 import { formatCurrency, formatDate } from '@/lib/format';
 
 // PENDING/CANCELLED come from the inbound PO webhook (purchaseOrderWebhook.service.ts).
-// RECEIVED comes from a different source — the separate get_purchase sync
-// (purchaseSync.service.ts), which always writes RECEIVED and never PENDING/CANCELLED.
+// PARTIALLY_RECEIVED/RECEIVED come from a different source — the separate get_purchase
+// sync (purchaseSync.service.ts), which links each delivered invoice back to its PO via
+// po_id and never writes PENDING/CANCELLED itself.
 // Offered together here so admins can check both "ordered" and "received" state
 // from one screen, even though they're populated by two different pipelines.
-const STATUS_OPTIONS = ['PENDING', 'CANCELLED', 'RECEIVED'];
+const STATUS_OPTIONS = ['all', 'PENDING', 'CANCELLED', 'PARTIALLY_RECEIVED', 'RECEIVED'];
 
 export function ReceivedPurchaseOrdersTab() {
   const { outletId, customFrom, customTo, setOutletId } = useFilterStore();
   const { data: outlets } = useOutlets();
-  const [status, setStatus] = useState('PENDING');
-  const [dateField, setDateField] = useState<'orderDate' | 'petpoojaCreatedAt'>('orderDate');
+  const [status, setStatus] = useState('all');
   const [search, setSearch] = useState('');
-  const [page, setPage] = useResettingPage(`${status}|${outletId}|${customFrom}|${customTo}|${dateField}|${search}`);
+  const [page, setPage] = useResettingPage(`${status}|${outletId}|${customFrom}|${customTo}|${search}`);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data, isLoading, isError } = usePurchaseOrders(page, 12, { status, dateField, search: search || undefined });
+  const { data, isLoading, isError } = usePurchaseOrders(page, 12, { status, search: search || undefined });
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        {status === 'RECEIVED' ? (
+        {status === 'RECEIVED' || status === 'PARTIALLY_RECEIVED' ? (
           <>
-            <strong>Received</strong> purchase orders come from the Purchase API sync (get_purchase), synced every
-            15 minutes — these are invoices for goods already delivered and added to stock.
+            <strong>{status === 'RECEIVED' ? 'Received' : 'Partially received'}</strong> purchase orders come from
+            the Purchase API sync (get_purchase), synced every 15 minutes — these are invoices for goods delivered
+            and added to stock, matched back to their PO by Petpooja&apos;s po_id.
+            {status === 'PARTIALLY_RECEIVED' && ' Some line items are still awaiting further delivery.'}
           </>
-        ) : (
+        ) : status === 'PENDING' || status === 'CANCELLED' ? (
           <>
             <strong>{status === 'PENDING' ? 'Pending' : 'Cancelled'}</strong> purchase orders come from the inbound
             Purchase Order webhook (API 8) — Petpooja pushes these to{' '}
             <code className="text-xs">/api/webhooks/petpooja/purchase-order</code> the moment a PO is saved on
             their end, before anything has actually been received.
+          </>
+        ) : (
+          <>
+            Showing every status — <strong>Pending</strong>/<strong>Cancelled</strong> come from the inbound
+            Purchase Order webhook (API 8) the moment a PO is saved on Petpooja&apos;s end, while{' '}
+            <strong>Partially Received</strong>/<strong>Received</strong> come from the separate Purchase API sync
+            (get_purchase, every 15 minutes) as goods are actually delivered.
           </>
         )}{' '}
         This is a read-only view of local data, not a live Petpooja call.
@@ -57,18 +66,6 @@ export function ReceivedPurchaseOrdersTab() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap items-end gap-3">
           <DateRangeFilter />
-          <Select
-            value={dateField}
-            onValueChange={(v) => setDateField(v === 'petpoojaCreatedAt' ? 'petpoojaCreatedAt' : 'orderDate')}
-          >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Date filter" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="orderDate">Order Date</SelectItem>
-              <SelectItem value="petpoojaCreatedAt">Created On</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
         <div className="flex items-end gap-3">
           <Input
@@ -90,14 +87,14 @@ export function ReceivedPurchaseOrdersTab() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={status} onValueChange={(v) => setStatus(v ?? 'PENDING')}>
+          <Select value={status} onValueChange={(v) => setStatus(v ?? 'all')}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
               {STATUS_OPTIONS.map((s) => (
                 <SelectItem key={s} value={s}>
-                  {s.replace('_', ' ')}
+                  {s === 'all' ? 'All Statuses' : s.replace('_', ' ')}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -120,7 +117,9 @@ export function ReceivedPurchaseOrdersTab() {
             <p className="text-sm text-destructive">Failed to load purchase orders.</p>
           ) : data.rows.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No {status.toLowerCase().replace('_', ' ')} purchase orders in this date range.
+              {status === 'all'
+                ? 'No purchase orders in this date range.'
+                : `No ${status.toLowerCase().replace('_', ' ')} purchase orders in this date range.`}
             </p>
           ) : (
             <>

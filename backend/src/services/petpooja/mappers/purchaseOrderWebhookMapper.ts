@@ -61,6 +61,7 @@ export function mapPurchaseOrderWebhook(data: PetpoojaPurchaseOrderWebhookData):
   return {
     poNumber: data.poNumber,
     petpoojaPurchaseId: data.id,
+    poId: null, // this mapper builds the PO itself, not an invoice raised against one
     invoiceNumber: null,
     orderDate: new Date(),
     expectedDate: parsePetpoojaDate(data.deliveryDate),

@@ -83,6 +83,11 @@ export interface PetpoojaPurchaseParty {
 
 export interface PetpoojaPurchaseRecord {
   purchase_id: string;
+  // Linked Purchase Order ID if this purchase/invoice was raised against a PO
+  // (null/absent if it's a standalone purchase with no PO). See purchaseSync.service.ts —
+  // this is how an invoice gets matched back to the PENDING PurchaseOrder row the
+  // PO webhook already created, instead of spawning a disconnected duplicate row.
+  po_id?: string | null;
   type?: string;
   invoice_number?: string;
   invoice_date?: string;
