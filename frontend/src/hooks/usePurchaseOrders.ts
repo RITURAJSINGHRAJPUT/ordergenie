@@ -1,7 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { useRangeParams, type RangeParamOverrides } from '@/hooks/useRangeParams';
-import type { ApiEnvelope, PaginationMeta, PurchaseOrderDetail, PurchaseOrderRow } from '@/types/api';
+import type {
+  ApiEnvelope,
+  PaginationMeta,
+  PurchaseOrderDetail,
+  PurchaseOrderItemsByDay,
+  PurchaseOrderRow,
+} from '@/types/api';
 
 export interface UsePurchaseOrdersOptions {
   status?: string;
@@ -28,6 +34,26 @@ export function usePurchaseOrders(page: number, pageSize = 12, options?: UsePurc
         },
       });
       return { rows: res.data.data, meta: res.data.meta as PaginationMeta };
+    },
+  });
+}
+
+export interface UsePurchaseOrderItemsByDayOptions {
+  overrides?: RangeParamOverrides;
+  dateField?: 'orderDate' | 'petpoojaCreatedAt';
+}
+
+export function usePurchaseOrderItemsByDay(options?: UsePurchaseOrderItemsByDayOptions) {
+  const { overrides, dateField } = options ?? {};
+  const rangeParams = useRangeParams(overrides);
+
+  return useQuery({
+    queryKey: ['purchase-order-items-by-day', rangeParams, dateField],
+    queryFn: async () => {
+      const res = await apiClient.get<ApiEnvelope<PurchaseOrderItemsByDay[]>>('/purchase-orders/by-item', {
+        params: { ...rangeParams, ...(dateField ? { dateField } : {}) },
+      });
+      return res.data.data;
     },
   });
 }

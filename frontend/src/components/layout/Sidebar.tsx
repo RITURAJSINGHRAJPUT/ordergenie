@@ -73,7 +73,7 @@ export function Sidebar({ onNavigate, collapsed = false }: { onNavigate?: () => 
           {collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
         </button>
       </div>
-      <nav className={cn('flex-1 space-y-1', collapsed ? 'px-2' : 'px-3')}>
+      <nav className={cn('flex-1 min-h-0 overflow-y-auto space-y-1', collapsed ? 'px-2' : 'px-3')}>
         {items.map((item) => {
           if (item.children) {
             const SectionIcon = item.icon;

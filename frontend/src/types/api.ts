@@ -213,6 +213,11 @@ export interface PurchaseOrderRow {
   petpoojaCreatedAt: string | null;
 }
 
+export interface PurchaseOrderItemsByDay {
+  date: string;
+  items: { itemName: string; unit: string | null; quantity: number }[];
+}
+
 export interface PurchaseOrderDetail extends PurchaseOrderRow {
   vendor: { id: string; name: string; contactPerson: string | null; phone: string | null } | null;
   invoiceNumber: string | null;

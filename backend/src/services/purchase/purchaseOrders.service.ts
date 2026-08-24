@@ -63,6 +63,62 @@ export async function listPurchaseOrders(query: PurchaseOrderQuery) {
   };
 }
 
+export interface PurchaseOrderItemsByDay {
+  date: string;
+  items: { itemName: string; unit: string | null; quantity: number }[];
+}
+
+/**
+ * Day-wise, item-wise breakdown across POs — e.g. "23 Aug: Tiramisu 5, Coke 10" —
+ * summed from every PurchaseOrderItem whose PO falls in range, not one PO at a time.
+ * Grouped by (itemName, unit) rather than itemName alone: the same item can
+ * legitimately appear in different units across POs, and summing across units would
+ * produce a meaningless total.
+ */
+export async function listPurchaseOrderItemsByDay(query: PurchaseOrderQuery): Promise<PurchaseOrderItemsByDay[]> {
+  const { from, to } = resolveDateRange(query);
+  const dateField = query.dateField === 'petpoojaCreatedAt' ? 'petpoojaCreatedAt' : 'orderDate';
+
+  const where: Prisma.PurchaseOrderWhereInput = {
+    ...(query.outletId ? { outletId: query.outletId } : {}),
+    ...(query.brand ? { outlet: { brand: query.brand } } : {}),
+    ...(query.status ? { status: query.status as PurchaseOrderStatus } : { status: { not: PurchaseOrderStatus.CANCELLED } }),
+    [dateField]: { gte: from, lte: to },
+  };
+
+  const items = await prisma.purchaseOrderItem.findMany({
+    where: { purchaseOrder: where },
+    select: {
+      itemName: true,
+      unit: true,
+      quantity: true,
+      purchaseOrder: { select: { orderDate: true, petpoojaCreatedAt: true } },
+    },
+  });
+
+  const byDay = new Map<string, Map<string, { itemName: string; unit: string | null; quantity: number }>>();
+  for (const item of items) {
+    const dateValue = dateField === 'petpoojaCreatedAt' ? item.purchaseOrder.petpoojaCreatedAt : item.purchaseOrder.orderDate;
+    if (!dateValue) continue;
+    const dayKey = dateValue.toISOString().slice(0, 10);
+    const itemKey = `${item.itemName}|${item.unit ?? ''}`;
+
+    if (!byDay.has(dayKey)) byDay.set(dayKey, new Map());
+    const dayMap = byDay.get(dayKey)!;
+    const existing = dayMap.get(itemKey);
+    const qty = toNum(item.quantity);
+    if (existing) existing.quantity += qty;
+    else dayMap.set(itemKey, { itemName: item.itemName, unit: item.unit, quantity: qty });
+  }
+
+  return Array.from(byDay.entries())
+    .sort(([a], [b]) => (a < b ? 1 : -1))
+    .map(([date, dayMap]) => ({
+      date,
+      items: Array.from(dayMap.values()).sort((a, b) => b.quantity - a.quantity),
+    }));
+}
+
 export async function getPurchaseOrderById(id: string, restrictToOutletId?: string) {
   const po = await prisma.purchaseOrder.findUnique({
     where: { id },

@@ -19,7 +19,7 @@ function BrandSectionLayoutInner({ brand, children }: { brand: string; children:
   const pathname = usePathname();
   const router = useRouter();
   const isAdmin = useAuthStore((s) => s.user)?.role === 'ADMIN';
-  const { outletId, setOutletId } = useBrandFilter();
+  const { outletId, setOutletId, toolbarExtra } = useBrandFilter();
 
   const basePath = `/${brand.toLowerCase()}`;
 
@@ -34,7 +34,7 @@ function BrandSectionLayoutInner({ brand, children }: { brand: string; children:
       <h1 className="text-xl font-semibold">{brand}</h1>
 
       <OutletCards brand={brand} value={outletId} onChange={setOutletId} />
-      <DateRangeFilter />
+      <DateRangeFilter extra={toolbarExtra} />
 
       <div>{children}</div>
     </div>

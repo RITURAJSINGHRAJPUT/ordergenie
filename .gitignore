@@ -29,3 +29,4 @@ npm-debug.log*
 # misc
 coverage/
 .turbo/
+*.txt/

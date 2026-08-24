@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
 import { useFilterStore } from '@/store/filterStore';
 
-export function DateRangeFilter() {
+export function DateRangeFilter({ extra }: { extra?: ReactNode }) {
   const { customFrom, customTo, setCustomRange } = useFilterStore();
   const [draftFrom, setDraftFrom] = useState(customFrom ?? '');
   const [draftTo, setDraftTo] = useState(customTo ?? '');
@@ -29,6 +29,7 @@ export function DateRangeFilter() {
           setDraftTo(nextTo);
         }}
       />
+      {extra}
       {/* size="lg" to match DateRangePicker's trigger button height (h-9) — size="sm" (h-7)
           left an 8px mismatch between the two buttons sitting side by side. */}
       <Button size="lg" disabled={!draftFrom || !draftTo} onClick={handleFetch} variant={dirty ? 'default' : 'outline'}>

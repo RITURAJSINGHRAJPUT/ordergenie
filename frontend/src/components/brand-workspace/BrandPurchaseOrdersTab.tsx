@@ -1,26 +1,53 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/shared/Pagination';
 import { PurchaseOrderDetailDialog } from '@/components/purchase-orders/PurchaseOrderDetailDialog';
+import { PurchaseOrdersByDayView } from '@/components/purchase-orders/PurchaseOrdersByDayView';
 import { STATUS_VARIANT } from '@/components/purchase-orders/status';
 import { usePurchaseOrders } from '@/hooks/usePurchaseOrders';
 import { useResettingPage } from '@/hooks/useResettingPage';
 import { useFilterStore } from '@/store/filterStore';
+import { useBrandFilter } from '@/lib/brand-filter-context';
 import { formatCurrency, formatDate } from '@/lib/format';
+
+type PurchaseOrdersView = 'orders' | 'by-item';
 
 export function BrandPurchaseOrdersTab({ brand, outletId }: { brand: string; outletId: string }) {
   const { customFrom, customTo } = useFilterStore();
+  const { setToolbarExtra } = useBrandFilter();
+  const [view, setView] = useState<PurchaseOrdersView>('orders');
   const [search, setSearch] = useState('');
   const filterKey = `${outletId}|${customFrom}|${customTo}|${search}`;
   const [page, setPage] = useResettingPage(filterKey);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { data, isLoading, isError } = usePurchaseOrders(page, 12, { overrides: { outletId, brand }, search: search || undefined });
+
+  // Renders the view toggle inline in the shared date-range/Fetch toolbar (BrandSectionLayout),
+  // since this page can't pass it there directly — that toolbar lives in the parent layout.
+  useEffect(() => {
+    setToolbarExtra(
+      <div className="flex items-center gap-1">
+        <Button type="button" size="lg" variant={view === 'orders' ? 'default' : 'outline'} onClick={() => setView('orders')}>
+          Order wise
+        </Button>
+        <Button type="button" size="lg" variant={view === 'by-item' ? 'default' : 'outline'} onClick={() => setView('by-item')}>
+          Item wise
+        </Button>
+      </div>
+    );
+    return () => setToolbarExtra(null);
+  }, [view, setToolbarExtra]);
+
+  if (view === 'by-item') {
+    return <PurchaseOrdersByDayView brand={brand} outletId={outletId} />;
+  }
 
   return (
     <Card>
