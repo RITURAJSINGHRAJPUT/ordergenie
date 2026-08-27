@@ -140,16 +140,52 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
                     <TableRow>
                       <TableHead>Ingredient</TableHead>
                       <TableHead>Unit</TableHead>
-                      <TableHead className="text-right">Opening</TableHead>
-                      <TableHead className="text-right">Closing (AI)</TableHead>
-                      <TableHead className="text-right">Actual Closing</TableHead>
-                      <TableHead className="text-right">Sales</TableHead>
-                      <TableHead className="text-right">Sales (AI)</TableHead>
-                      <TableHead className="text-right">PO</TableHead>
-                      <TableHead className="text-right">Next Day Opening</TableHead>
-                      <TableHead className="text-right">Sales Variance</TableHead>
-                      <TableHead className="text-right">Closing Variance</TableHead>
-                      <TableHead className="text-right">Wastage</TableHead>
+                      <TableHead className="text-center">Opening</TableHead>
+                      <TableHead className="text-center">
+                        <div className="leading-tight">
+                          Closing
+                          <br />
+                          (AI)
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-center">
+                        <div className="leading-tight">
+                          Actual
+                          <br />
+                          Closing
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-center">Sales</TableHead>
+                      <TableHead className="text-center">
+                        <div className="leading-tight">
+                          Sales
+                          <br />
+                          (AI)
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-center">PO</TableHead>
+                      <TableHead className="text-center">
+                        <div className="leading-tight">
+                          Next Day
+                          <br />
+                          Opening
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-center">
+                        <div className="leading-tight">
+                          Sales
+                          <br />
+                          Variance
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-center">
+                        <div className="leading-tight">
+                          Closing
+                          <br />
+                          Variance
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-center">Wastage</TableHead>
                       <TableHead />
                     </TableRow>
                   </TableHeader>
@@ -240,7 +276,7 @@ function ReconciliationTableRow({ row, outletId, brand, date, canManageSelection
         )}
       </TableCell>
       <TableCell>{row.unit ?? '—'}</TableCell>
-      <TableCell className="text-right">
+      <TableCell className="text-center">
         {canEdit ? (
           <Input
             type="number"
@@ -248,14 +284,14 @@ function ReconciliationTableRow({ row, outletId, brand, date, canManageSelection
             min="0"
             value={editor.opening}
             onChange={(e) => editor.setOpening(e.target.value)}
-            className="h-8 w-24 text-right"
+            className="h-8 w-24 text-center"
           />
         ) : (
           formatNumber(row.opening)
         )}
       </TableCell>
-      <TableCell className="text-right">{formatNumber(row.factualClosingAI)}</TableCell>
-      <TableCell className="text-right">
+      <TableCell className="text-center">{formatNumber(row.factualClosingAI)}</TableCell>
+      <TableCell className="text-center">
         {canEdit ? (
           <Input
             type="number"
@@ -263,19 +299,19 @@ function ReconciliationTableRow({ row, outletId, brand, date, canManageSelection
             min="0"
             value={editor.actualClosing}
             onChange={(e) => editor.setActualClosing(e.target.value)}
-            className="h-8 w-24 text-right"
+            className="h-8 w-24 text-center"
           />
         ) : (
           formatNumber(row.actualClosing)
         )}
       </TableCell>
-      <TableCell className="text-right">{formatNumber(row.salesToday)}</TableCell>
-      <TableCell className="text-right">{formatNumber(row.predictedSales)}</TableCell>
-      <TableCell className="text-right">{formatNumber(row.poToday)}</TableCell>
-      <TableCell className="text-right">{formatNumber(row.nextDayOpening)}</TableCell>
-      <TableCell className="text-right">{varianceBadge(row.salesVariance, row.predictedSales)}</TableCell>
-      <TableCell className="text-right">{varianceBadge(row.closingVariance, row.factualClosingAI)}</TableCell>
-      <TableCell className="text-right">
+      <TableCell className="text-center">{formatNumber(row.salesToday)}</TableCell>
+      <TableCell className="text-center">{formatNumber(row.predictedSales)}</TableCell>
+      <TableCell className="text-center">{formatNumber(row.poToday)}</TableCell>
+      <TableCell className="text-center">{formatNumber(row.nextDayOpening)}</TableCell>
+      <TableCell className="text-center">{varianceBadge(row.salesVariance, row.predictedSales)}</TableCell>
+      <TableCell className="text-center">{varianceBadge(row.closingVariance, row.factualClosingAI)}</TableCell>
+      <TableCell className="text-center">
         <Badge variant={row.derivedWastage > 0 ? 'destructive' : 'secondary'}>{formatNumber(row.derivedWastage)}</Badge>
       </TableCell>
       <TableCell>
