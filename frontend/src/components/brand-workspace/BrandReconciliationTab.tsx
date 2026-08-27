@@ -16,7 +16,6 @@ import { useResettingPage } from '@/hooks/useResettingPage';
 import { useFilterStore } from '@/store/filterStore';
 import { useAuthStore } from '@/store/authStore';
 import { formatDate, formatNumber } from '@/lib/format';
-import { cn } from '@/lib/utils';
 import type { ReconciliationRow } from '@/types/api';
 
 const VARIANCE_ALERT_PCT = 10;
@@ -33,6 +32,16 @@ function todayIso(): string {
 function varianceTone(variance: number, base: number): 'alert' | 'normal' {
   const pct = base !== 0 ? (Math.abs(variance) / Math.abs(base)) * 100 : variance !== 0 ? 100 : 0;
   return pct > VARIANCE_ALERT_PCT ? 'alert' : 'normal';
+}
+
+function varianceBadge(variance: number, base: number) {
+  const alert = varianceTone(variance, base) === 'alert';
+  return (
+    <Badge variant={alert ? 'destructive' : 'secondary'}>
+      {variance > 0 ? '+' : ''}
+      {formatNumber(variance)}
+    </Badge>
+  );
 }
 
 /** Shared editable Opening/Actual Closing + save state, used by both the table row (tablet/desktop) and card (mobile) renderings of the same data row. */
@@ -124,18 +133,22 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
             </p>
           ) : (
             <>
-              {/* Tablet and up: full data table. AI/predicted values ride along as subtext (see ValueWithAI)
-                  rather than their own columns, so this stays narrow enough to avoid horizontal scroll. */}
+              {/* Tablet and up: full data table, horizontally scrollable if it still doesn't fit. */}
               <div className="hidden overflow-x-auto md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Ingredient</TableHead>
+                      <TableHead>Unit</TableHead>
                       <TableHead className="text-right">Opening</TableHead>
+                      <TableHead className="text-right">Closing (AI)</TableHead>
                       <TableHead className="text-right">Actual Closing</TableHead>
                       <TableHead className="text-right">Sales</TableHead>
+                      <TableHead className="text-right">Sales (AI)</TableHead>
                       <TableHead className="text-right">PO</TableHead>
                       <TableHead className="text-right">Next Day Opening</TableHead>
+                      <TableHead className="text-right">Sales Variance</TableHead>
+                      <TableHead className="text-right">Closing Variance</TableHead>
                       <TableHead className="text-right">Wastage</TableHead>
                       <TableHead />
                     </TableRow>
@@ -156,7 +169,7 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
                 </Table>
               </div>
 
-              {/* Mobile: stacked cards instead of a table row per ingredient. */}
+              {/* Mobile: stacked cards instead of a cramped 13-column table. */}
               <div className="space-y-3 md:hidden">
                 {data.rows.map((row) => (
                   <ReconciliationCard
@@ -220,13 +233,13 @@ function ReconciliationTableRow({ row, outletId, brand, date, canManageSelection
     <TableRow>
       <TableCell className="font-medium">
         {row.itemName}
-        {row.unit && <span className="ml-1.5 text-xs font-normal text-muted-foreground">({row.unit})</span>}
         {!row.hasManualEntry && (
           <Badge variant="outline" className="ml-2">
             Not entered
           </Badge>
         )}
       </TableCell>
+      <TableCell>{row.unit ?? '—'}</TableCell>
       <TableCell className="text-right">
         {canEdit ? (
           <Input
@@ -241,35 +254,27 @@ function ReconciliationTableRow({ row, outletId, brand, date, canManageSelection
           formatNumber(row.opening)
         )}
       </TableCell>
+      <TableCell className="text-right">{formatNumber(row.factualClosingAI)}</TableCell>
       <TableCell className="text-right">
         {canEdit ? (
-          <div className="inline-flex flex-col items-end gap-0.5">
-            <Input
-              type="number"
-              step="1"
-              min="0"
-              value={editor.actualClosing}
-              onChange={(e) => editor.setActualClosing(e.target.value)}
-              className={cn(
-                'h-8 w-24 text-right',
-                varianceTone(row.closingVariance, row.factualClosingAI) === 'alert' && 'border-destructive text-destructive'
-              )}
-            />
-            <span className="text-[11px] text-muted-foreground">AI: {formatNumber(row.factualClosingAI)}</span>
-          </div>
-        ) : (
-          <ValueWithAI
-            value={row.actualClosing}
-            aiValue={row.factualClosingAI}
-            tone={varianceTone(row.closingVariance, row.factualClosingAI)}
+          <Input
+            type="number"
+            step="1"
+            min="0"
+            value={editor.actualClosing}
+            onChange={(e) => editor.setActualClosing(e.target.value)}
+            className="h-8 w-24 text-right"
           />
+        ) : (
+          formatNumber(row.actualClosing)
         )}
       </TableCell>
-      <TableCell className="text-right">
-        <ValueWithAI value={row.salesToday} aiValue={row.predictedSales} tone={varianceTone(row.salesVariance, row.predictedSales)} />
-      </TableCell>
+      <TableCell className="text-right">{formatNumber(row.salesToday)}</TableCell>
+      <TableCell className="text-right">{formatNumber(row.predictedSales)}</TableCell>
       <TableCell className="text-right">{formatNumber(row.poToday)}</TableCell>
       <TableCell className="text-right">{formatNumber(row.nextDayOpening)}</TableCell>
+      <TableCell className="text-right">{varianceBadge(row.salesVariance, row.predictedSales)}</TableCell>
+      <TableCell className="text-right">{varianceBadge(row.closingVariance, row.factualClosingAI)}</TableCell>
       <TableCell className="text-right">
         <Badge variant={row.derivedWastage > 0 ? 'destructive' : 'secondary'}>{formatNumber(row.derivedWastage)}</Badge>
       </TableCell>
@@ -301,16 +306,6 @@ function StatTile({ label, value, tone }: { label: string; value: string; tone?:
     <div className="rounded-md bg-muted/50 px-2.5 py-1.5">
       <div className="text-[11px] text-muted-foreground">{label}</div>
       <div className={tone === 'alert' ? 'font-medium text-destructive' : 'font-medium'}>{value}</div>
-    </div>
-  );
-}
-
-/** An actual value plus its AI/predicted counterpart as subtext, colored when they vary too much — replaces a separate AI column and a separate variance column with one compact cell. */
-function ValueWithAI({ value, aiValue, tone }: { value: number; aiValue: number; tone: 'alert' | 'normal' }) {
-  return (
-    <div>
-      <div className={tone === 'alert' ? 'font-medium text-destructive' : 'font-medium'}>{formatNumber(value)}</div>
-      <div className="text-[11px] text-muted-foreground">AI: {formatNumber(aiValue)}</div>
     </div>
   );
 }
@@ -366,33 +361,31 @@ function ReconciliationCard({ row, outletId, brand, date, canManageSelection, ca
                   min="0"
                   value={editor.actualClosing}
                   onChange={(e) => editor.setActualClosing(e.target.value)}
-                  className={cn(
-                    'h-8',
-                    varianceTone(row.closingVariance, row.factualClosingAI) === 'alert' && 'border-destructive text-destructive'
-                  )}
+                  className="h-8"
                 />
-                <div className="text-[11px] text-muted-foreground">AI: {formatNumber(row.factualClosingAI)}</div>
               </div>
             </>
           ) : (
             <>
               <StatTile label="Opening" value={formatNumber(row.opening)} />
-              <div className="space-y-1">
-                <Label className="text-[11px] text-muted-foreground">Actual Closing</Label>
-                <ValueWithAI
-                  value={row.actualClosing}
-                  aiValue={row.factualClosingAI}
-                  tone={varianceTone(row.closingVariance, row.factualClosingAI)}
-                />
-              </div>
+              <StatTile label="Actual Closing" value={formatNumber(row.actualClosing)} />
             </>
           )}
-          <div className="space-y-1">
-            <Label className="text-[11px] text-muted-foreground">Sales</Label>
-            <ValueWithAI value={row.salesToday} aiValue={row.predictedSales} tone={varianceTone(row.salesVariance, row.predictedSales)} />
-          </div>
+          <StatTile label="Closing (AI)" value={formatNumber(row.factualClosingAI)} />
+          <StatTile label="Sales" value={formatNumber(row.salesToday)} />
+          <StatTile label="Sales (AI)" value={formatNumber(row.predictedSales)} />
           <StatTile label="PO" value={formatNumber(row.poToday)} />
           <StatTile label="Next Day Opening" value={formatNumber(row.nextDayOpening)} />
+          <StatTile
+            label="Sales Variance"
+            value={`${row.salesVariance > 0 ? '+' : ''}${formatNumber(row.salesVariance)}`}
+            tone={varianceTone(row.salesVariance, row.predictedSales)}
+          />
+          <StatTile
+            label="Closing Variance"
+            value={`${row.closingVariance > 0 ? '+' : ''}${formatNumber(row.closingVariance)}`}
+            tone={varianceTone(row.closingVariance, row.factualClosingAI)}
+          />
           <StatTile label="Wastage" value={formatNumber(row.derivedWastage)} tone={row.derivedWastage > 0 ? 'alert' : 'normal'} />
         </div>
 
