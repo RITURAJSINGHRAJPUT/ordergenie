@@ -350,6 +350,37 @@ export interface SyncLogRow {
   errorMessage: string | null;
 }
 
+export interface PredictionSummary {
+  totalRows: number;
+  minStockDate: string | null;
+  maxStockDate: string | null;
+  sources: string[];
+}
+
+export interface PredictionImportLogRow {
+  id: string;
+  fileName: string;
+  status: 'RUNNING' | 'SUCCESS' | 'FAILED' | 'PARTIAL';
+  startedAt: string;
+  completedAt: string | null;
+  rowsCreated: number;
+  rowsUpdated: number;
+  sheetsProcessed: number;
+  sheetsSkipped: { sheet: string; reason: string }[];
+  errorMessage: string | null;
+  triggeredByName: string | null;
+}
+
+export interface PredictionImportResult {
+  logId: string;
+  status: 'RUNNING' | 'SUCCESS' | 'FAILED' | 'PARTIAL';
+  rowsCreated: number;
+  rowsUpdated: number;
+  sheetsProcessed: number;
+  sheetsSkipped: { sheet: string; reason: string }[];
+  errorMessage: string | null;
+}
+
 // --- Petpooja API Explorer ---
 
 export type ExplorerApiType = 'orders' | 'purchase' | 'transfer';

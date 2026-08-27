@@ -127,6 +127,7 @@ model User {
   notificationSettings NotificationSetting?
   wastageEntries       WastageEntry[]
   soldOutEntries       SoldOutEntry[]
+  predictionImportLogs PredictionImportLog[]
 }
 
 model Outlet {
@@ -408,6 +409,26 @@ model PredictedSale {
 
   @@unique([outletId, itemName, stockDate])
   @@index([outletId, stockDate])
+}
+
+// One row per uploaded forecast workbook (Settings > Sales Forecast). Mirrors
+// SyncLog's RUNNING -> SUCCESS/PARTIAL/FAILED shape (see syncRunner.service.ts) so
+// the "Recent Imports" UI can reuse the same status-badge convention as "Recent Sync
+// Runs" rather than inventing a parallel one.
+model PredictionImportLog {
+  id                String      @id @default(cuid())
+  fileName          String
+  status            SyncStatus
+  startedAt         DateTime    @default(now())
+  completedAt       DateTime?
+  rowsCreated       Int         @default(0)
+  rowsUpdated       Int         @default(0)
+  sheetsProcessed   Int         @default(0)
+  sheetsSkipped     Json?
+  errorMessage      String?
+  triggeredByUserId String?
+  triggeredByUser   User?       @relation(fields: [triggeredByUserId], references: [id])
+  createdAt         DateTime    @default(now())
 }
 
 model SoldOutEntry {
