@@ -101,11 +101,9 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
         <CardHeader>
           <CardTitle className="text-base">Ingredient Reconciliation</CardTitle>
           <CardDescription>
-            Showing reconciliation for <strong>{formatDate(date)}</strong> — only items selected in{' '}
-            <strong>Class A Items</strong> for {brand} appear here. Opening and Actual Closing are entered manually;
-            Sales/PO are pulled from real synced data; Predicted values use an imported forecast where one's
-            available for that item and date, falling back to a 7-day trailing average otherwise, plus a 15% safety
-            margin on top either way. Change the date via the date filter above.
+            Showing reconciliation for <strong>{formatDate(date)}</strong> — items selected in{' '}
+            <strong>Class A Items</strong> for {brand}. Opening/Closing are manual, Sales/PO are synced, Predicted =
+            forecast or 7-day avg +15%. Change date above.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
