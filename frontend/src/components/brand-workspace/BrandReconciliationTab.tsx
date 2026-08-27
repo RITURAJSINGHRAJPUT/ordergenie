@@ -284,7 +284,7 @@ function ReconciliationTableRow({ row, outletId, brand, date, canManageSelection
             min="0"
             value={editor.opening}
             onChange={(e) => editor.setOpening(e.target.value)}
-            className="h-8 w-24 text-center"
+            className="h-7 w-16 text-center"
           />
         ) : (
           formatNumber(row.opening)
@@ -299,7 +299,7 @@ function ReconciliationTableRow({ row, outletId, brand, date, canManageSelection
             min="0"
             value={editor.actualClosing}
             onChange={(e) => editor.setActualClosing(e.target.value)}
-            className="h-8 w-24 text-center"
+            className="h-7 w-16 text-center"
           />
         ) : (
           formatNumber(row.actualClosing)
@@ -386,7 +386,7 @@ function ReconciliationCard({ row, outletId, brand, date, canManageSelection, ca
                   min="0"
                   value={editor.opening}
                   onChange={(e) => editor.setOpening(e.target.value)}
-                  className="h-8"
+                  className="h-7"
                 />
               </div>
               <div className="space-y-1">
@@ -397,7 +397,7 @@ function ReconciliationCard({ row, outletId, brand, date, canManageSelection, ca
                   min="0"
                   value={editor.actualClosing}
                   onChange={(e) => editor.setActualClosing(e.target.value)}
-                  className="h-8"
+                  className="h-7"
                 />
               </div>
             </>
