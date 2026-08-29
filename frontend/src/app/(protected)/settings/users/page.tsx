@@ -13,9 +13,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pagination } from '@/components/shared/Pagination';
-import { useUsers, useCreateUser, useUpdateUser, useRoles } from '@/hooks/useSettings';
+import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useRoles } from '@/hooks/useSettings';
 import { useOutlets } from '@/hooks/useOutlets';
 import { usePagedList } from '@/hooks/usePagedList';
+import { useAuthStore } from '@/store/authStore';
 import { formatDate } from '@/lib/format';
 import type { UserRow } from '@/types/api';
 
@@ -24,8 +25,10 @@ export default function UsersPage() {
   const { data: roles } = useRoles();
   const { data: outlets } = useOutlets();
   const updateUser = useUpdateUser();
+  const currentUserId = useAuthStore((s) => s.user)?.id;
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<UserRow | null>(null);
+  const [deleting, setDeleting] = useState<UserRow | null>(null);
   const { pageItems: usersPage, meta: usersMeta, setPage: setUsersPage } = usePagedList(users);
 
   return (
@@ -77,9 +80,19 @@ export default function UsersPage() {
                         />
                       </TableCell>
                       <TableCell>
-                        <button className="text-xs font-medium text-primary hover:underline" onClick={() => setEditing(u)}>
-                          Edit
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button className="text-xs font-medium text-primary hover:underline" onClick={() => setEditing(u)}>
+                            Edit
+                          </button>
+                          {u.id !== currentUserId && (
+                            <button
+                              className="text-xs font-medium text-destructive hover:underline"
+                              onClick={() => setDeleting(u)}
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -93,6 +106,7 @@ export default function UsersPage() {
 
       <CreateUserDialog open={createOpen} onClose={() => setCreateOpen(false)} roles={roles ?? []} outlets={outlets ?? []} />
       <EditUserDialog user={editing} onClose={() => setEditing(null)} roles={roles ?? []} outlets={outlets ?? []} />
+      <DeleteUserDialog user={deleting} onClose={() => setDeleting(null)} />
     </div>
   );
 }
@@ -210,6 +224,7 @@ function EditUserDialog({
   const updateUser = useUpdateUser();
   const [roleId, setRoleId] = useState(user?.roleId ?? '');
   const [outletId, setOutletId] = useState(user?.outletId ?? '');
+  const [email, setEmail] = useState(user?.email ?? '');
   const [password, setPassword] = useState('');
 
   return (
@@ -227,6 +242,10 @@ function EditUserDialog({
           <DialogTitle>Edit {user?.name}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
+          <div className="space-y-1">
+            <Label>Email</Label>
+            <Input type="email" value={email || user?.email || ''} onChange={(e) => setEmail(e.target.value)} />
+          </div>
           <div className="space-y-1">
             <Label>Role</Label>
             <Select value={roleId || user?.roleId} onValueChange={(v) => setRoleId(v ?? '')}>
@@ -270,6 +289,7 @@ function EditUserDialog({
               updateUser.mutate(
                 {
                   id: user.id,
+                  email: email || user.email,
                   roleId: roleId || user.roleId,
                   outletId: outletId || null,
                   ...(password ? { password } : {}),
@@ -279,6 +299,38 @@ function EditUserDialog({
             }}
           >
             Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteUserDialog({ user, onClose }: { user: UserRow | null; onClose: () => void }) {
+  const deleteUser = useDeleteUser();
+
+  return (
+    <Dialog open={Boolean(user)} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete {user?.name}?</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          This permanently deletes {user?.email}&apos;s account. This can&apos;t be undone.
+        </p>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={deleteUser.isPending}
+            onClick={() => {
+              if (!user) return;
+              deleteUser.mutate(user.id, { onSuccess: onClose });
+            }}
+          >
+            Delete
           </Button>
         </DialogFooter>
       </DialogContent>

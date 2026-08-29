@@ -75,13 +75,35 @@ export function useCreateUser() {
 export function useUpdateUser() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...input }: { id: string; name?: string; roleId?: string; outletId?: string | null; isActive?: boolean; password?: string }) =>
-      apiClient.put(`/settings/users/${id}`, input),
+    mutationFn: async ({
+      id,
+      ...input
+    }: {
+      id: string;
+      name?: string;
+      email?: string;
+      roleId?: string;
+      outletId?: string | null;
+      isActive?: boolean;
+      password?: string;
+    }) => apiClient.put(`/settings/users/${id}`, input),
     onSuccess: () => {
       toast.success('User updated');
       qc.invalidateQueries({ queryKey: ['settings', 'users'] });
     },
     onError: () => toast.error('Failed to update user'),
+  });
+}
+
+export function useDeleteUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => apiClient.delete(`/settings/users/${id}`),
+    onSuccess: () => {
+      toast.success('User deleted');
+      qc.invalidateQueries({ queryKey: ['settings', 'users'] });
+    },
+    onError: () => toast.error('Failed to delete user'),
   });
 }
 

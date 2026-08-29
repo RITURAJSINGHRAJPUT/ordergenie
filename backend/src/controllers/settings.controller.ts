@@ -78,6 +78,7 @@ export const createUserHandler = asyncHandler(async (req: Request, res: Response
 
 const updateUserSchema = z.object({
   name: z.string().optional(),
+  email: z.string().email().optional(),
   roleId: z.string().optional(),
   outletId: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
@@ -88,6 +89,11 @@ export const updateUserHandler = asyncHandler(async (req: Request, res: Response
   const input = updateUserSchema.parse(req.body);
   const user = await settingsService.updateUser(req.params.id, input);
   return ok(res, { id: user.id, email: user.email });
+});
+
+export const deleteUserHandler = asyncHandler(async (req: Request, res: Response) => {
+  await settingsService.deleteUser(req.params.id, req.user!.id);
+  return ok(res, { removed: true });
 });
 
 // --- Roles ---

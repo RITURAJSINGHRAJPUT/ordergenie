@@ -12,6 +12,7 @@ import {
   listUsersHandler,
   createUserHandler,
   updateUserHandler,
+  deleteUserHandler,
   listRolesHandler,
   updateRoleHandler,
   getNotificationSettingsHandler,
@@ -47,6 +48,7 @@ router.put('/sync-schedule/:syncType', adminOnly, updateSyncScheduleHandler);
 router.get('/users', adminOnly, listUsersHandler);
 router.post('/users', adminOnly, createUserHandler);
 router.put('/users/:id', adminOnly, updateUserHandler);
+router.delete('/users/:id', adminOnly, deleteUserHandler);
 
 router.get('/roles', adminOnly, listRolesHandler);
 router.put('/roles/:id', adminOnly, updateRoleHandler);

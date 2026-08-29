@@ -104,6 +104,7 @@ export async function createUser(input: CreateUserInput) {
 
 export interface UpdateUserInput {
   name?: string;
+  email?: string;
   roleId?: string;
   outletId?: string | null;
   isActive?: boolean;
@@ -113,12 +114,28 @@ export interface UpdateUserInput {
 export async function updateUser(id: string, input: UpdateUserInput) {
   const data: Record<string, unknown> = {};
   if (input.name !== undefined) data.name = input.name;
+  if (input.email !== undefined) {
+    const existing = await prisma.user.findUnique({ where: { email: input.email } });
+    if (existing && existing.id !== id) throw new AppError('A user with this email already exists', 409);
+    data.email = input.email;
+  }
   if (input.roleId !== undefined) data.roleId = input.roleId;
   if (input.outletId !== undefined) data.outletId = input.outletId;
   if (input.isActive !== undefined) data.isActive = input.isActive;
   if (input.password) data.passwordHash = await bcrypt.hash(input.password, 10);
 
   return prisma.user.update({ where: { id }, data });
+}
+
+export async function deleteUser(id: string, requestingUserId: string) {
+  if (id === requestingUserId) throw new AppError('You cannot delete your own account', 400);
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) throw new AppError('User not found', 404);
+
+  await prisma.$transaction([
+    prisma.notificationSetting.deleteMany({ where: { userId: id } }),
+    prisma.user.delete({ where: { id } }),
+  ]);
 }
 
 // --- Roles ---
