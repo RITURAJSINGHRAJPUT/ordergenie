@@ -141,6 +141,7 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
                       <TableHead>Ingredient</TableHead>
                       <TableHead>Unit</TableHead>
                       <TableHead className="text-center">Opening</TableHead>
+                      <TableHead className="text-center">Sales</TableHead>
                       <TableHead className="text-center">
                         <div className="leading-tight">
                           Closing
@@ -155,7 +156,6 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
                           Closing
                         </div>
                       </TableHead>
-                      <TableHead className="text-center">Sales</TableHead>
                       <TableHead className="text-center">
                         <div className="leading-tight">
                           Sales
@@ -290,6 +290,7 @@ function ReconciliationTableRow({ row, outletId, brand, date, canManageSelection
           formatNumber(row.opening)
         )}
       </TableCell>
+      <TableCell className="text-center">{formatNumber(row.salesToday)}</TableCell>
       <TableCell className="text-center">{formatNumber(row.factualClosingAI)}</TableCell>
       <TableCell className="text-center">
         {canEdit ? (
@@ -305,7 +306,6 @@ function ReconciliationTableRow({ row, outletId, brand, date, canManageSelection
           formatNumber(row.actualClosing)
         )}
       </TableCell>
-      <TableCell className="text-center">{formatNumber(row.salesToday)}</TableCell>
       <TableCell className="text-center">{formatNumber(row.predictedSales)}</TableCell>
       <TableCell className="text-center">{formatNumber(row.poToday)}</TableCell>
       <TableCell className="text-center">{formatNumber(row.nextDayOpening)}</TableCell>

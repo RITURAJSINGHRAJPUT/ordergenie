@@ -1,4 +1,4 @@
-import { Prisma, DataSource, ClassAItemType, RecipeTriggerType } from '@prisma/client';
+import { Prisma, DataSource, ClassAItemType, RecipeTriggerType, PurchaseOrderStatus } from '@prisma/client';
 import { prisma } from '../../config/db';
 import { dateOnlyUtc } from '../../utils/dateRange';
 import { parsePagination, toSkipTake, paginationMeta } from '../../utils/pagination';
@@ -184,15 +184,39 @@ async function getPredictedSalesByItemAndDay(
   return flat;
 }
 
+// Attributed by expectedDate (day goods are due to arrive), not orderDate (day the
+// PO was placed) — a PO placed today for delivery on the 29th should land in the
+// 29th's row, not today's. CANCELLED POs are excluded since they're never arriving;
+// every other status (PENDING/PARTIALLY_RECEIVED/RECEIVED) still counts as expected
+// stock for that day.
 async function getPOByItem(outletId: string, day: Date): Promise<Map<string, number>> {
   const rows = await prisma.purchaseOrderItem.groupBy({
     by: ['itemName'],
-    where: { purchaseOrder: { outletId, orderDate: { gte: day, lt: addDays(day, 1) } } },
+    where: {
+      purchaseOrder: {
+        outletId,
+        expectedDate: { gte: day, lt: addDays(day, 1) },
+        status: { not: PurchaseOrderStatus.CANCELLED },
+      },
+    },
     _sum: { quantity: true },
   });
   const map = new Map<string, number>();
   for (const r of rows) map.set(r.itemName, toNum(r._sum.quantity));
   return map;
+}
+
+// The same itemName can appear with different units across different POs (see the
+// similar caveat in purchaseOrders.service.ts's listPurchaseOrderItemsByDay), so this
+// takes the most recent PO's unit per item at this outlet as the source of truth.
+async function getUnitFromPO(outletId: string): Promise<Map<string, string | null>> {
+  const rows = await prisma.purchaseOrderItem.findMany({
+    where: { purchaseOrder: { outletId } },
+    select: { itemName: true, unit: true },
+    orderBy: { purchaseOrder: { orderDate: 'desc' } },
+    distinct: ['itemName'],
+  });
+  return new Map(rows.map((r) => [r.itemName, r.unit]));
 }
 
 interface ManualEntry {
@@ -281,12 +305,13 @@ export async function getReconciliationDashboard(query: ReconciliationQuery) {
 
   const recipesByIngredient = await getRecipeRules(brand);
 
-  const [universe, salesByItem, poByItem, manualEntries, predictedByItem] = await Promise.all([
+  const [universe, salesByItem, poByItem, manualEntries, predictedByItem, unitByItem] = await Promise.all([
     getSelectedIngredientUniverse(outletId, brand, day),
     getSalesByItemAndDay(outletId, windowStart, day),
     getPOByItem(outletId, day),
     getManualEntries(outletId, day),
     getPredictedSalesByItemAndDay(outletId, day, dayKey, recipesByIngredient),
+    getUnitFromPO(outletId),
   ]);
   applyRecipesToSalesMap(salesByItem, recipesByIngredient);
 
@@ -314,7 +339,7 @@ export async function getReconciliationDashboard(query: ReconciliationQuery) {
         {
           itemName,
           classAItemId,
-          unit: manual?.unit ?? null,
+          unit: unitByItem.get(itemName) ?? manual?.unit ?? null,
           hasManualEntry: Boolean(manual),
           opening: manual?.opening ?? 0,
           actualClosing: manual?.actualClosing ?? 0,
