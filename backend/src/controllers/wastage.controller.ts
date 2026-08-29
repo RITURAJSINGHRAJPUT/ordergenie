@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { WastageReason } from '@prisma/client';
 import { asyncHandler } from '../utils/asyncHandler';
 import { ok, created } from '../utils/apiResponse';
+import { outletRestrictionFor } from '../utils/authz';
 import { listWastageEntries, createWastageEntry, deleteWastageEntry } from '../services/wastage/wastage.service';
 
 const createSchema = z.object({
@@ -22,11 +23,19 @@ export const listWastageHandler = asyncHandler(async (req: Request, res: Respons
 
 export const createWastageHandler = asyncHandler(async (req: Request, res: Response) => {
   const input = createSchema.parse(req.body);
-  const entry = await createWastageEntry({ ...input, reportedById: req.user?.id });
+  // outletId arrives in the body, which scopeToOutlet doesn't touch (it only rewrites
+  // query params) — without this an outlet-scoped caller could log wastage against any
+  // outlet just by editing the payload.
+  const restrictTo = outletRestrictionFor(req);
+  const entry = await createWastageEntry({
+    ...input,
+    ...(restrictTo ? { outletId: restrictTo } : {}),
+    reportedById: req.user?.id,
+  });
   return created(res, entry);
 });
 
 export const deleteWastageHandler = asyncHandler(async (req: Request, res: Response) => {
-  await deleteWastageEntry(req.params.id);
+  await deleteWastageEntry(req.params.id, outletRestrictionFor(req));
   return ok(res, { removed: true });
 });

@@ -1,12 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { BrandIndexRedirect } from '@/components/brand-workspace/BrandIndexRedirect';
 
 export default function AikoIndexPage() {
-  const router = useRouter();
-  useEffect(() => {
-    router.replace('/aiko/overview');
-  }, [router]);
-  return null;
+  return <BrandIndexRedirect brand="Aiko" />;
 }

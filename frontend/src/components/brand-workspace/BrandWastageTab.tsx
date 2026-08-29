@@ -33,7 +33,11 @@ const REASON_LABEL: Record<WastageReason, string> = Object.fromEntries(REASONS.m
 
 export function BrandWastageTab({ brand, outletId }: { brand: string; outletId: string }) {
   const { customFrom, customTo } = useFilterStore();
-  const isViewer = useAuthStore((s) => s.user)?.role === 'VIEWER';
+  const role = useAuthStore((s) => s.user)?.role;
+  const isViewer = role === 'VIEWER';
+  // Head Chef reports wastage but can't remove records after the fact (backend enforces
+  // the same split — see wastage.routes.ts canCreate/canDelete).
+  const canDelete = !isViewer && role !== 'HEAD_CHEF';
   const filterKey = `${outletId}|${customFrom}|${customTo}`;
   const [page, setPage] = useResettingPage(filterKey);
   const { data, isLoading, isError } = useWastageEntries(page, 12, { outletId, brand });
@@ -185,7 +189,7 @@ export function BrandWastageTab({ brand, outletId }: { brand: string; outletId: 
                         <TableCell>{w.reportedByName ?? '—'}</TableCell>
                         <TableCell className="max-w-[200px] truncate">{w.notes ?? '—'}</TableCell>
                         <TableCell>
-                          {!isViewer && (
+                          {canDelete && (
                             <button
                               type="button"
                               onClick={() => deleteEntry.mutate(w.id)}

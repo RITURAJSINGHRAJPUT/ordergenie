@@ -1,12 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { BrandIndexRedirect } from '@/components/brand-workspace/BrandIndexRedirect';
 
 export default function CapicheIndexPage() {
-  const router = useRouter();
-  useEffect(() => {
-    router.replace('/capiche/overview');
-  }, [router]);
-  return null;
+  return <BrandIndexRedirect brand="Capiche" />;
 }

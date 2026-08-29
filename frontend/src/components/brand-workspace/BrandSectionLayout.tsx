@@ -1,8 +1,6 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/authStore';
+import { type ReactNode } from 'react';
 import { OutletCards } from '@/components/shared/OutletCards';
 import { DateRangeFilter } from '@/components/shared/DateRangeFilter';
 import { BrandFilterProvider, useBrandFilter } from '@/lib/brand-filter-context';
@@ -16,18 +14,10 @@ export function BrandSectionLayout({ brand, children }: { brand: string; childre
 }
 
 function BrandSectionLayoutInner({ brand, children }: { brand: string; children: ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const isAdmin = useAuthStore((s) => s.user)?.role === 'ADMIN';
+  // Out-of-reach pages (another brand entirely, or admin-only ones like sales-api) are
+  // redirected centrally by the protected layout's route guard, off the same allowlist
+  // that builds the sidebar — nothing brand-specific to enforce here.
   const { outletId, setOutletId, toolbarExtra } = useBrandFilter();
-
-  const basePath = `/${brand.toLowerCase()}`;
-
-  useEffect(() => {
-    if (!isAdmin && pathname === `${basePath}/sales-api`) {
-      router.replace(`${basePath}/overview`);
-    }
-  }, [isAdmin, pathname, router, basePath]);
 
   return (
     <div className="space-y-4">

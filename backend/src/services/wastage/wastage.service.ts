@@ -1,5 +1,6 @@
 import { Prisma, WastageReason } from '@prisma/client';
 import { prisma } from '../../config/db';
+import { AppError } from '../../utils/apiResponse';
 import { resolveDateRange } from '../../utils/dateRange';
 import { parsePagination, toSkipTake, paginationMeta } from '../../utils/pagination';
 
@@ -81,6 +82,13 @@ export async function createWastageEntry(input: CreateWastageInput) {
   });
 }
 
-export async function deleteWastageEntry(id: string): Promise<void> {
+export async function deleteWastageEntry(id: string, restrictToOutletId?: string): Promise<void> {
+  // Deleting by bare id would let an outlet-scoped caller remove another outlet's
+  // record — the id is guessable from any list response they've been shown.
+  const entry = await prisma.wastageEntry.findUnique({ where: { id } });
+  if (!entry) throw new AppError('Wastage entry not found', 404);
+  if (restrictToOutletId && entry.outletId !== restrictToOutletId) {
+    throw new AppError('Wastage entry not found', 404);
+  }
   await prisma.wastageEntry.delete({ where: { id } });
 }

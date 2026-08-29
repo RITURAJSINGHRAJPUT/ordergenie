@@ -6,12 +6,19 @@ import { listWastageHandler, createWastageHandler, deleteWastageHandler } from '
 
 const router = Router();
 
-const canWrite = requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER);
+// HEAD_CHEF reports wastage from the kitchen but can't remove records after the fact,
+// so create and delete are separate gates rather than one shared write gate.
+const canCreate = requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.HEAD_CHEF);
+const canDelete = requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER);
 
-router.use(verifyJwt, requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.VIEWER), scopeToOutlet);
+router.use(
+  verifyJwt,
+  requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.HEAD_CHEF, RoleName.VIEWER),
+  scopeToOutlet
+);
 
 router.get('/', listWastageHandler);
-router.post('/', canWrite, createWastageHandler);
-router.delete('/:id', canWrite, deleteWastageHandler);
+router.post('/', canCreate, createWastageHandler);
+router.delete('/:id', canDelete, deleteWastageHandler);
 
 export default router;

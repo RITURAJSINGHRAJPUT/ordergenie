@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronDown, LogOut, PanelLeft, PanelLeftClose } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { NAV_ITEMS, filterForHeadChef, type NavItem } from './nav-items';
+import { type NavItem } from './nav-items';
+import { useVisibleNav } from '@/hooks/useVisibleNav';
 import { useAuthStore } from '@/store/authStore';
 import { useSidebarStore } from '@/store/sidebarStore';
 import { useRouter } from 'next/navigation';
@@ -17,16 +18,10 @@ function isLinkActive(pathname: string, href: string): boolean {
 export function Sidebar({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuthStore();
-  const isAdmin = user?.role === 'ADMIN';
-  const isViewer = user?.role === 'VIEWER';
+  const { logout } = useAuthStore();
   const toggleCollapsed = useSidebarStore((s) => s.toggle);
 
-  const baseItems = user?.role === 'HEAD_CHEF' ? filterForHeadChef(NAV_ITEMS) : NAV_ITEMS;
-  // "Sales API" (brand-workspace children, adminOnly) stays admin-only — VIEWER only
-  // gains visibility into "Settings" itself, which then further restricts its own
-  // tabs (see settings/layout.tsx) down to Petpooja API + API Explorer.
-  const items = baseItems.filter((item) => !item.adminOnly || isAdmin || (isViewer && item.label === 'Settings'));
+  const { items } = useVisibleNav();
 
   const [manualToggle, setManualToggle] = useState<Record<string, boolean>>({});
 
@@ -93,7 +88,7 @@ export function Sidebar({ onNavigate, collapsed = false }: { onNavigate?: () => 
             }
 
             const open = isOpen(item);
-            const children = item.children.filter((child) => !child.adminOnly || isAdmin);
+            const children = item.children;
             return (
               <div key={item.label}>
                 <button
