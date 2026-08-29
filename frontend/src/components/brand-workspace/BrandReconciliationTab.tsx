@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/shared/Pagination';
+import { SuggestionChips } from '@/components/brand-workspace/BrandClassAItemsTab';
 import { useReconciliation, useUpsertReconciliationEntry } from '@/hooks/useReconciliation';
 import { useAddClassAItem, useRemoveClassAItem } from '@/hooks/useClassAItems';
 import { useResettingPage } from '@/hooks/useResettingPage';
@@ -225,25 +226,33 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
           )}
 
           {!isAllOutlets && !isHeadChef && !isViewer && (
-            <div className="flex flex-wrap items-end gap-2 border-t pt-3">
-              <div className="w-full space-y-1 sm:w-auto">
-                <Label htmlFor="new-ingredient">Add Ingredient</Label>
-                <Input
-                  id="new-ingredient"
-                  value={newItemName}
-                  onChange={(e) => setNewItemName(e.target.value)}
-                  placeholder="e.g. Flour 1kg"
-                  className="h-8 w-full sm:w-56"
-                />
+            <div className="space-y-2 border-t pt-3">
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="w-full space-y-1 sm:w-auto">
+                  <Label htmlFor="new-ingredient">Add Ingredient</Label>
+                  <Input
+                    id="new-ingredient"
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
+                    placeholder="e.g. Flour 1kg"
+                    className="h-8 w-full sm:w-56"
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!newItemName.trim() || addClassAItem.isPending}
+                  onClick={handleAddIngredient}
+                >
+                  + Add
+                </Button>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!newItemName.trim() || addClassAItem.isPending}
-                onClick={handleAddIngredient}
-              >
-                + Add
-              </Button>
+              {addClassAItem.suggestions.length > 0 && (
+                <SuggestionChips
+                  suggestions={addClassAItem.suggestions}
+                  onPick={(name) => { setNewItemName(name); addClassAItem.clearSuggestions(); }}
+                />
+              )}
             </div>
           )}
         </CardContent>

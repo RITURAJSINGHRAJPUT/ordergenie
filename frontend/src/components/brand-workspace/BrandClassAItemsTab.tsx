@@ -98,6 +98,10 @@ export function BrandClassAItemsTab({ brand, outletId }: { brand: string; outlet
             </div>
           )}
 
+          {!isViewer && addItem.suggestions.length > 0 && (
+            <SuggestionChips suggestions={addItem.suggestions} onPick={(name) => { setValue(name); addItem.clearSuggestions(); }} />
+          )}
+
           <div className="flex flex-wrap gap-2">
             {entries?.map((entry) => (
               <Badge key={entry.id} variant="secondary" className="gap-1 pr-1">
@@ -117,6 +121,26 @@ export function BrandClassAItemsTab({ brand, outletId }: { brand: string; outlet
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+export function SuggestionChips({ suggestions, onPick }: { suggestions: string[]; onPick: (name: string) => void }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-xs text-muted-foreground">Did you mean:</p>
+      <div className="flex flex-wrap gap-1.5">
+        {suggestions.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => onPick(s)}
+            className="rounded-full border px-2.5 py-0.5 text-xs hover:bg-muted"
+          >
+            {s}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api-client';
 import { useRangeParams } from '@/hooks/useRangeParams';
@@ -26,8 +28,13 @@ export function useClassAItemsSummary({ brand, outletId }: { brand: string; outl
 
 export function useAddClassAItem() {
   const qc = useQueryClient();
-  return useMutation({
+  // The backend rejects item names that don't exist in Sales/Purchase data and returns
+  // the closest real names, which callers render as click-to-fill suggestions.
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+
+  const mutation = useMutation({
     mutationFn: async (input: { brand: string; type: ClassAItemType; value: string }) => apiClient.post('/class-a-items', input),
+    onMutate: () => setSuggestions([]),
     onSuccess: (_data, input) => {
       toast.success(`Added ${input.value} to Class A items`);
       qc.invalidateQueries({ queryKey: ['class-a-items', input.brand] });
@@ -36,8 +43,16 @@ export function useAddClassAItem() {
       // an added item wouldn't show up there until something else triggered a refetch.
       qc.invalidateQueries({ queryKey: ['reconciliation'] });
     },
-    onError: () => toast.error('Failed to add item'),
+    onError: (error) => {
+      const body = axios.isAxiosError(error)
+        ? (error.response?.data as { message?: string; details?: { suggestions?: string[] } } | undefined)
+        : undefined;
+      setSuggestions(body?.details?.suggestions ?? []);
+      toast.error(body?.message ?? 'Failed to add item');
+    },
   });
+
+  return { ...mutation, suggestions, clearSuggestions: () => setSuggestions([]) };
 }
 
 export function useRemoveClassAItem() {

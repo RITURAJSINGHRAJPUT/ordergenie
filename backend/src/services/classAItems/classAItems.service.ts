@@ -1,5 +1,7 @@
 import { ClassAItemType } from '@prisma/client';
+import { distance } from 'fastest-levenshtein';
 import { prisma } from '../../config/db';
+import { AppError } from '../../utils/apiResponse';
 import { resolveDateRange } from '../../utils/dateRange';
 import { aggregateItemSales } from '../sales/sales.service';
 
@@ -7,11 +9,71 @@ export async function listClassAItems(brand: string) {
   return prisma.classAItem.findMany({ where: { brand }, orderBy: { createdAt: 'asc' } });
 }
 
+/** Every item name that actually exists for a brand, across both Sales and Purchase data. */
+async function listRealItemNames(brand: string): Promise<string[]> {
+  const [saleRows, poRows] = await Promise.all([
+    prisma.saleItem.findMany({
+      where: { sale: { outlet: { brand } } },
+      select: { itemName: true },
+      distinct: ['itemName'],
+    }),
+    prisma.purchaseOrderItem.findMany({
+      where: { purchaseOrder: { outlet: { brand } } },
+      select: { itemName: true },
+      distinct: ['itemName'],
+    }),
+  ]);
+
+  const byLower = new Map<string, string>();
+  for (const row of [...saleRows, ...poRows]) {
+    const name = row.itemName.trim();
+    const key = name.toLowerCase();
+    if (name && !byLower.has(key)) byLower.set(key, name);
+  }
+  return Array.from(byLower.values());
+}
+
+// Substring hits outrank pure edit distance because real names carry pack-size
+// suffixes ("Coke" vs "Coke 300 Ml") that Levenshtein alone scores as very distant.
+function suggestNames(input: string, pool: string[], limit = 5): string[] {
+  const query = input.trim().toLowerCase();
+  if (!query) return [];
+  return pool
+    .map((name) => {
+      const lower = name.toLowerCase();
+      return { name, contains: lower.includes(query) || query.includes(lower), dist: distance(query, lower) };
+    })
+    .sort((a, b) => {
+      if (a.contains !== b.contains) return a.contains ? -1 : 1;
+      if (a.dist !== b.dist) return a.dist - b.dist;
+      return a.name.localeCompare(b.name);
+    })
+    .slice(0, limit)
+    .map((r) => r.name);
+}
+
 export async function addClassAItem(brand: string, type: ClassAItemType, value: string) {
+  let resolved = value.trim();
+
+  // ITEM entries are free text from the admin, and a name that matches nothing real
+  // becomes a permanent all-zero reconciliation row that looks identical to a real
+  // item that simply hasn't sold. Block it, and offer the closest real names instead.
+  if (type === ClassAItemType.ITEM) {
+    const realNames = await listRealItemNames(brand);
+    const match = realNames.find((n) => n.toLowerCase() === resolved.toLowerCase());
+    if (!match) {
+      throw new AppError('No item with this name exists in Sales or Purchase data', 400, {
+        suggestions: suggestNames(resolved, realNames),
+      });
+    }
+    // Store the real spelling so casing variants can't create duplicate entries.
+    resolved = match;
+  }
+
   return prisma.classAItem.upsert({
-    where: { brand_type_value: { brand, type, value } },
+    where: { brand_type_value: { brand, type, value: resolved } },
     update: {},
-    create: { brand, type, value },
+    create: { brand, type, value: resolved },
   });
 }
 

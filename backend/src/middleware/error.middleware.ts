@@ -8,7 +8,11 @@ export function notFoundHandler(req: Request, res: Response) {
 
 export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
   if (err instanceof AppError) {
-    return res.status(err.statusCode).json({ success: false, message: err.message });
+    return res.status(err.statusCode).json({
+      success: false,
+      message: err.message,
+      ...(err.details !== undefined ? { details: err.details } : {}),
+    });
   }
 
   logger.error('Unhandled error', { path: req.originalUrl, err });
