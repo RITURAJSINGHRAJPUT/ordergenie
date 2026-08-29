@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { ApiType, SyncType } from '@prisma/client';
+import { ApiType, SyncType, RoleName } from '@prisma/client';
 import { prisma } from '../../config/db';
 import { encrypt, decrypt } from '../../utils/encryption';
 import { AppError } from '../../utils/apiResponse';
@@ -78,6 +78,28 @@ export async function listUsers() {
   });
 }
 
+// HEAD_CHEF/OUTLET_MANAGER accounts are meaningless without an assigned outlet —
+// scopeToOutlet (rbac.middleware.ts) 403s nearly every data route for these roles
+// when outletId is null, and outletRestrictionFor (authz.ts) would otherwise leave
+// detail lookups silently unscoped. Neither the create nor update payload previously
+// enforced this, which is how a broken no-outlet HEAD_CHEF account reached production.
+async function assertOutletRequirementSatisfied(roleId: string, outletId: string | null | undefined) {
+  const role = await prisma.role.findUnique({ where: { id: roleId } });
+  if (!role) throw new AppError('Role not found', 404);
+
+  const requiresOutlet = role.name === RoleName.HEAD_CHEF || role.name === RoleName.OUTLET_MANAGER;
+  if (requiresOutlet && !outletId) {
+    throw new AppError('This role requires an assigned outlet', 400);
+  }
+
+  if (outletId) {
+    const outlet = await prisma.outlet.findUnique({ where: { id: outletId } });
+    if (!outlet || !outlet.isActive) {
+      throw new AppError('Outlet not found or inactive', 400);
+    }
+  }
+}
+
 export interface CreateUserInput {
   email: string;
   password: string;
@@ -89,6 +111,8 @@ export interface CreateUserInput {
 export async function createUser(input: CreateUserInput) {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) throw new AppError('A user with this email already exists', 409);
+
+  await assertOutletRequirementSatisfied(input.roleId, input.outletId);
 
   const passwordHash = await bcrypt.hash(input.password, 10);
   return prisma.user.create({
@@ -123,6 +147,17 @@ export async function updateUser(id: string, input: UpdateUserInput) {
   if (input.outletId !== undefined) data.outletId = input.outletId;
   if (input.isActive !== undefined) data.isActive = input.isActive;
   if (input.password) data.passwordHash = await bcrypt.hash(input.password, 10);
+
+  // Only re-validate when role or outlet are actually changing — checks the
+  // resulting (post-update) combination, not just whichever field was touched,
+  // so e.g. switching role to HEAD_CHEF on a user with no outlet still gets caught.
+  if (input.roleId !== undefined || input.outletId !== undefined) {
+    const current = await prisma.user.findUnique({ where: { id } });
+    if (!current) throw new AppError('User not found', 404);
+    const effectiveRoleId = input.roleId ?? current.roleId;
+    const effectiveOutletId = input.outletId !== undefined ? input.outletId : current.outletId;
+    await assertOutletRequirementSatisfied(effectiveRoleId, effectiveOutletId);
+  }
 
   return prisma.user.update({ where: { id }, data });
 }

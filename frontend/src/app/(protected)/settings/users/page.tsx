@@ -120,13 +120,14 @@ function CreateUserDialog({
   open: boolean;
   onClose: () => void;
   roles: { id: string; name: string }[];
-  outlets: { id: string; name: string }[];
+  outlets: { id: string; name: string; brand: string }[];
 }) {
   const createUser = useCreateUser();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [roleId, setRoleId] = useState('');
+  const [brand, setBrand] = useState('');
   const [outletId, setOutletId] = useState<string>('');
 
   function reset() {
@@ -134,8 +135,14 @@ function CreateUserDialog({
     setName('');
     setPassword('');
     setRoleId('');
+    setBrand('');
     setOutletId('');
   }
+
+  const brandOptions = [...new Set(outlets.map((o) => o.brand))].sort();
+  const filteredOutlets = outlets.filter((o) => o.brand === brand);
+  const roleName = roles.find((r) => r.id === roleId)?.name;
+  const requiresOutlet = roleName === 'HEAD_CHEF' || roleName === 'OUTLET_MANAGER';
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && (onClose(), reset())}>
@@ -172,13 +179,34 @@ function CreateUserDialog({
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Assigned Outlet (Outlet Manager only)</Label>
-            <Select value={outletId} onValueChange={(v) => setOutletId(v ?? '')}>
+            <Label>Brand{requiresOutlet ? ' (required for this role)' : ''}</Label>
+            <Select
+              value={brand}
+              onValueChange={(v) => {
+                setBrand(v ?? '');
+                setOutletId('');
+              }}
+            >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="None" />
+                <SelectValue placeholder="Select brand" />
               </SelectTrigger>
               <SelectContent>
-                {outlets.map((o) => (
+                {brandOptions.map((b) => (
+                  <SelectItem key={b} value={b}>
+                    {b}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label>Assigned Outlet{requiresOutlet ? ' (required for this role)' : ''}</Label>
+            <Select value={outletId} onValueChange={(v) => setOutletId(v ?? '')} disabled={!brand}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={brand ? 'Select outlet' : 'Pick a brand first'} />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredOutlets.map((o) => (
                   <SelectItem key={o.id} value={o.id}>
                     {o.name}
                   </SelectItem>
@@ -189,7 +217,14 @@ function CreateUserDialog({
         </div>
         <DialogFooter>
           <Button
-            disabled={!email || !name || !password || !roleId || createUser.isPending}
+            disabled={
+              !email ||
+              !name ||
+              !password ||
+              !roleId ||
+              (requiresOutlet && (!brand || !outletId)) ||
+              createUser.isPending
+            }
             onClick={() =>
               createUser.mutate(
                 { email, name, password, roleId, outletId: outletId || undefined },
@@ -219,13 +254,24 @@ function EditUserDialog({
   user: UserRow | null;
   onClose: () => void;
   roles: { id: string; name: string }[];
-  outlets: { id: string; name: string }[];
+  outlets: { id: string; name: string; brand: string }[];
 }) {
   const updateUser = useUpdateUser();
   const [roleId, setRoleId] = useState(user?.roleId ?? '');
   const [outletId, setOutletId] = useState(user?.outletId ?? '');
+  const [brand, setBrand] = useState('');
   const [email, setEmail] = useState(user?.email ?? '');
   const [password, setPassword] = useState('');
+
+  const effectiveRoleId = roleId || user?.roleId || '';
+  const effectiveOutletId = outletId || user?.outletId || '';
+  const currentOutletBrand = outlets.find((o) => o.id === (user?.outletId ?? ''))?.brand ?? '';
+  const effectiveBrand = brand || currentOutletBrand;
+
+  const brandOptions = [...new Set(outlets.map((o) => o.brand))].sort();
+  const filteredOutlets = outlets.filter((o) => o.brand === effectiveBrand);
+  const roleName = roles.find((r) => r.id === effectiveRoleId)?.name;
+  const requiresOutlet = roleName === 'HEAD_CHEF' || roleName === 'OUTLET_MANAGER';
 
   return (
     <Dialog
@@ -248,7 +294,7 @@ function EditUserDialog({
           </div>
           <div className="space-y-1">
             <Label>Role</Label>
-            <Select value={roleId || user?.roleId} onValueChange={(v) => setRoleId(v ?? '')}>
+            <Select value={effectiveRoleId} onValueChange={(v) => setRoleId(v ?? '')}>
               <SelectTrigger className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -262,13 +308,34 @@ function EditUserDialog({
             </Select>
           </div>
           <div className="space-y-1">
-            <Label>Assigned Outlet</Label>
-            <Select value={outletId || user?.outletId || ''} onValueChange={(v) => setOutletId(v ?? '')}>
+            <Label>Brand{requiresOutlet ? ' (required for this role)' : ''}</Label>
+            <Select
+              value={effectiveBrand}
+              onValueChange={(v) => {
+                setBrand(v ?? '');
+                setOutletId('');
+              }}
+            >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="None" />
+                <SelectValue placeholder="Select brand" />
               </SelectTrigger>
               <SelectContent>
-                {outlets.map((o) => (
+                {brandOptions.map((b) => (
+                  <SelectItem key={b} value={b}>
+                    {b}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label>Assigned Outlet{requiresOutlet ? ' (required for this role)' : ''}</Label>
+            <Select value={effectiveOutletId} onValueChange={(v) => setOutletId(v ?? '')} disabled={!effectiveBrand}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder={effectiveBrand ? 'Select outlet' : 'Pick a brand first'} />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredOutlets.map((o) => (
                   <SelectItem key={o.id} value={o.id}>
                     {o.name}
                   </SelectItem>
@@ -283,15 +350,15 @@ function EditUserDialog({
         </div>
         <DialogFooter>
           <Button
-            disabled={updateUser.isPending}
+            disabled={updateUser.isPending || (requiresOutlet && (!effectiveBrand || !effectiveOutletId))}
             onClick={() => {
               if (!user) return;
               updateUser.mutate(
                 {
                   id: user.id,
                   email: email || user.email,
-                  roleId: roleId || user.roleId,
-                  outletId: outletId || null,
+                  roleId: effectiveRoleId,
+                  outletId: effectiveOutletId || null,
                   ...(password ? { password } : {}),
                 },
                 { onSuccess: onClose }
