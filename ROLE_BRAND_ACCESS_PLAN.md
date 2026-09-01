@@ -63,6 +63,29 @@ change, no migration, no new endpoint. Dashboard content was already outlet-scop
 - `frontend/src/app/(protected)/layout.tsx`, `frontend/src/app/(protected)/{capiche,aiko}/page.tsx`
 - `frontend/src/components/brand-workspace/BrandSectionLayout.tsx`, `.../BrandWastageTab.tsx`
 
+## Follow-up: query cache leaked across user switches
+
+Right after this shipped, the Aiko (Surat) head chef showed a **CAPICHE** sidebar section. The brand
+lock was not at fault — it rendered exactly what `GET /outlets` returned, and the production assignment
+was correct. The dashboard gave it away: **₹11,49,122 / 381 orders** is month-to-date for **Capiche Uni**,
+not Aiko (Surat) (₹10,23,708 / 292).
+
+Root cause: `providers.tsx` creates one `QueryClient` per app mount, and both logout
+(`Sidebar.handleLogout` → `router.replace('/login')`) and login (`LoginPage` → `router.replace('/dashboard')`)
+are client-side navigations with no reload. Nothing cleared the cache in between, so signing out of one
+account and into another in the same tab handed the previous user's `['outlets']`, `['dashboard']`,
+`['reconciliation']`, sales — everything — to the next one. A cross-user leak inside a tab; the nav change
+only made it visible by keying the sidebar off the outlets query. (The `api-client` 401 path escaped it —
+it uses `window.location.href`, a full reload.)
+
+Fix: `frontend/src/components/shared/AuthCacheReset.tsx`, mounted in `providers.tsx`, watches
+`useAuthStore(s => s.user?.id)` and calls `queryClient.clear()` plus `useFilterStore.reset()` whenever a
+signed-in identity changes. One choke point instead of per-call-site discipline — the 401 interceptor lives
+outside React and can't reach the QueryClient anyway. The first `undefined → id` transition (fresh tab,
+rehydration) is deliberately skipped so the first page's in-flight requests aren't cancelled; logout clears,
+which is what makes the subsequent login clean. `filterStore` gained a `reset()` so a previously selected
+outlet doesn't carry over either.
+
 ## Verification (done)
 - `tsc --noEmit` clean both sides; `npm run build` clean on frontend.
 - Access matrix exercised directly against `visibleNavItems`/`isRouteAllowed`:

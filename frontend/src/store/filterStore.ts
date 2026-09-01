@@ -10,6 +10,8 @@ interface FilterState {
   setOutletId: (outletId: string | 'all') => void;
   setRange: (range: DateRangePreset) => void;
   setCustomRange: (from: string, to: string) => void;
+  /** Back to defaults — used when the signed-in user changes (see AuthCacheReset). */
+  reset: () => void;
 }
 
 function todayIso(): string {
@@ -29,12 +31,19 @@ function daysAgoIso(days: number): string {
 // days (matching HISTORICAL_SYNC_WINDOW_DAYS on the backend) rather than today-only —
 // a today-only default made data synced as recently as yesterday invisible without
 // the user manually widening the filter, which reads as "not fetched" when it isn't.
+function defaults() {
+  return {
+    outletId: 'all' as const,
+    range: 'custom' as const,
+    customFrom: daysAgoIso(6),
+    customTo: todayIso(),
+  };
+}
+
 export const useFilterStore = create<FilterState>((set) => ({
-  outletId: 'all',
-  range: 'custom',
-  customFrom: daysAgoIso(6),
-  customTo: todayIso(),
+  ...defaults(),
   setOutletId: (outletId) => set({ outletId }),
   setRange: (range) => set({ range }),
   setCustomRange: (customFrom, customTo) => set({ customFrom, customTo, range: 'custom' }),
+  reset: () => set(defaults()),
 }));
