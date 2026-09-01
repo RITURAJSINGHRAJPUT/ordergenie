@@ -103,8 +103,10 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
           <CardTitle className="text-base">Ingredient Reconciliation</CardTitle>
           <CardDescription>
             Showing reconciliation for <strong>{formatDate(date)}</strong> — items selected in{' '}
-            <strong>Class A Items</strong> for {brand}. Opening/Closing are manual, Sales/PO are synced, Predicted =
-            forecast or 7-day avg +15%. Change date above.
+            <strong>Class A Items</strong> for {brand}. Opening/Actual Closing are manual, Sales/PO are synced. Closing
+            (AI) = Opening − Sales, Wastage = Closing (AI) − Sales, Next Day Opening = Actual Closing + Next Day PO. PO
+            is what&apos;s due today, Next Day PO what&apos;s due the following day. Sales (AI) = forecast or 7-day avg
+            +15%. Change date above.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -165,6 +167,13 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
                         </div>
                       </TableHead>
                       <TableHead className="text-center">PO</TableHead>
+                      <TableHead className="text-center">
+                        <div className="leading-tight">
+                          Next Day
+                          <br />
+                          PO
+                        </div>
+                      </TableHead>
                       <TableHead className="text-center">
                         <div className="leading-tight">
                           Next Day
@@ -317,6 +326,7 @@ function ReconciliationTableRow({ row, outletId, brand, date, canManageSelection
       </TableCell>
       <TableCell className="text-center">{formatNumber(row.predictedSales)}</TableCell>
       <TableCell className="text-center">{formatNumber(row.poToday)}</TableCell>
+      <TableCell className="text-center">{formatNumber(row.poNextDay)}</TableCell>
       <TableCell className="text-center">{formatNumber(row.nextDayOpening)}</TableCell>
       <TableCell className="text-center">{varianceBadge(row.salesVariance, row.predictedSales)}</TableCell>
       <TableCell className="text-center">{varianceBadge(row.closingVariance, row.factualClosingAI)}</TableCell>
@@ -420,6 +430,7 @@ function ReconciliationCard({ row, outletId, brand, date, canManageSelection, ca
           <StatTile label="Sales" value={formatNumber(row.salesToday)} />
           <StatTile label="Sales (AI)" value={formatNumber(row.predictedSales)} />
           <StatTile label="PO" value={formatNumber(row.poToday)} />
+          <StatTile label="Next Day PO" value={formatNumber(row.poNextDay)} />
           <StatTile label="Next Day Opening" value={formatNumber(row.nextDayOpening)} />
           <StatTile
             label="Sales Variance"

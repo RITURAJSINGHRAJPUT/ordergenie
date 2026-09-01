@@ -22,6 +22,21 @@ export function usePredictionImportLogs(page: number, pageSize = 12) {
   });
 }
 
+export function useDeletePredictionImportLog() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) =>
+      (await apiClient.delete<ApiEnvelope<{ removed: boolean; rowsDeleted: number }>>(`/predicted-sales/import-logs/${id}`)).data
+        .data,
+    onSuccess: (result) => {
+      toast.success(`Import deleted (${result.rowsDeleted} predicted-sale row${result.rowsDeleted === 1 ? '' : 's'} removed)`);
+      qc.invalidateQueries({ queryKey: ['prediction-summary'] });
+      qc.invalidateQueries({ queryKey: ['prediction-import-logs'] });
+    },
+    onError: () => toast.error('Failed to delete import'),
+  });
+}
+
 export function useImportPredictionWorkbook() {
   const qc = useQueryClient();
   return useMutation({

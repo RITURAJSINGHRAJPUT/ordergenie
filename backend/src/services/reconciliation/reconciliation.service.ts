@@ -10,11 +10,9 @@ import { listClassAItems } from '../classAItems/classAItems.service';
 // average, not a real model. Missing days count as 0, not excluded.
 const PREDICTED_SALES_WINDOW_DAYS = 7;
 // Safety margin applied to Sales (AI) regardless of source (imported forecast or
-// trailing-average fallback) — the displayed/used prediction is always 15% above
-// the raw figure, so everything derived from it (Closing (AI), Sales Variance)
-// already reflects the buffer. Replaces the old separate "+15%" column, which
-// buffered Next Day Opening instead — the margin now lives on the prediction
-// itself rather than tacked onto next-day stock at the end.
+// trailing-average fallback) — the displayed prediction is always 15% above the
+// raw figure. Since Closing (AI) switched to actual sales, Sales Variance is now
+// the only figure this buffer reaches.
 const SALES_AI_BUFFER_PCT = 0.15;
 
 function toNum(v: unknown): number {
@@ -246,6 +244,7 @@ export interface ReconciliationRowInputs {
   salesToday: number;
   predictedSales: number;
   poToday: number;
+  poNextDay: number;
 }
 
 export interface ReconciliationRow extends ReconciliationRowInputs {
@@ -259,20 +258,23 @@ export interface ReconciliationRow extends ReconciliationRowInputs {
 
 /**
  * Pure arithmetic, kept separate from the Prisma queries so the formulas can be
- * reasoned about (and tested) without a database. Mirrors the shrinkage model
- * implied by the user's own wastage formula (opening - sales - actualClosing),
- * which omits purchases — so predicted closing does too, for consistency.
+ * reasoned about (and tested) without a database.
+ *
+ * Closing (AI) is opening minus what actually sold — purchases are deliberately
+ * excluded, since stock arriving today isn't counted as sellable until the next
+ * day's opening. Next Day Opening therefore pairs today's actual closing with the
+ * PO due *tomorrow* (poNextDay), not the one that landed today.
  */
 function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
 export function computeReconciliationRow(inputs: ReconciliationRowInputs, stockDate: string): ReconciliationRow {
-  const factualClosingAI = inputs.opening - inputs.predictedSales;
-  const nextDayOpening = inputs.poToday + inputs.actualClosing;
+  const factualClosingAI = inputs.opening - inputs.salesToday;
+  const nextDayOpening = inputs.poNextDay + inputs.actualClosing;
   const salesVariance = inputs.salesToday - inputs.predictedSales;
   const closingVariance = inputs.actualClosing - factualClosingAI;
-  const derivedWastage = inputs.opening - inputs.salesToday - inputs.actualClosing;
+  const derivedWastage = factualClosingAI - inputs.salesToday;
 
   return {
     ...inputs,
@@ -305,10 +307,12 @@ export async function getReconciliationDashboard(query: ReconciliationQuery) {
 
   const recipesByIngredient = await getRecipeRules(brand);
 
-  const [universe, salesByItem, poByItem, manualEntries, predictedByItem, unitByItem] = await Promise.all([
+  const [universe, salesByItem, poByItem, poNextDayByItem, manualEntries, predictedByItem, unitByItem] = await Promise.all([
     getSelectedIngredientUniverse(outletId, brand, day),
     getSalesByItemAndDay(outletId, windowStart, day),
     getPOByItem(outletId, day),
+    // Next Day Opening is built from stock due to arrive tomorrow, not today's delivery.
+    getPOByItem(outletId, addDays(day, 1)),
     getManualEntries(outletId, day),
     getPredictedSalesByItemAndDay(outletId, day, dayKey, recipesByIngredient),
     getUnitFromPO(outletId),
@@ -346,6 +350,7 @@ export async function getReconciliationDashboard(query: ReconciliationQuery) {
           salesToday,
           predictedSales,
           poToday: poByItem.get(itemName) ?? 0,
+          poNextDay: poNextDayByItem.get(itemName) ?? 0,
         },
         dayKey
       );

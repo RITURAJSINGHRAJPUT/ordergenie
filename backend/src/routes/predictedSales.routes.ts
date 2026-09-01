@@ -8,6 +8,7 @@ import {
   importPredictionWorkbookHandler,
   getPredictionSummaryHandler,
   listPredictionImportLogsHandler,
+  deletePredictionImportLogHandler,
 } from '../controllers/predictedSalesImport.controller';
 
 const router = Router();
@@ -22,6 +23,7 @@ const adminOnly = requireRole(RoleName.ADMIN);
 router.post('/import', adminOnly, uploadPredictionWorkbookMiddleware, importPredictionWorkbookHandler);
 router.get('/summary', adminOnly, getPredictionSummaryHandler);
 router.get('/import-logs', adminOnly, listPredictionImportLogsHandler);
+router.delete('/import-logs/:id', adminOnly, deletePredictionImportLogHandler);
 
 router.use(requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.VIEWER), scopeToOutlet);
 

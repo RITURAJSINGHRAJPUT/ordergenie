@@ -7,8 +7,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Pagination } from '@/components/shared/Pagination';
-import { usePredictionSummary, usePredictionImportLogs, useImportPredictionWorkbook } from '@/hooks/usePredictedSalesImport';
+import {
+  usePredictionSummary,
+  usePredictionImportLogs,
+  useImportPredictionWorkbook,
+  useDeletePredictionImportLog,
+} from '@/hooks/usePredictedSalesImport';
 import { useResettingPage } from '@/hooks/useResettingPage';
 import { formatDate, formatTime } from '@/lib/format';
 import type { PredictionImportLogRow } from '@/types/api';
@@ -27,6 +33,7 @@ export default function PredictionsImportPage() {
   const importMutation = useImportPredictionWorkbook();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [deleting, setDeleting] = useState<PredictionImportLogRow | null>(null);
 
   function handleUpload() {
     if (!selectedFile) return;
@@ -143,6 +150,7 @@ export default function PredictionsImportPage() {
                       <TableHead>Sheets Skipped</TableHead>
                       <TableHead>Started</TableHead>
                       <TableHead>Uploaded By</TableHead>
+                      <TableHead />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -161,6 +169,14 @@ export default function PredictionsImportPage() {
                           {formatDate(l.startedAt)} {formatTime(l.startedAt)}
                         </TableCell>
                         <TableCell>{l.triggeredByName ?? '—'}</TableCell>
+                        <TableCell>
+                          <button
+                            className="text-xs font-medium text-destructive hover:underline"
+                            onClick={() => setDeleting(l)}
+                          >
+                            Delete
+                          </button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -171,6 +187,40 @@ export default function PredictionsImportPage() {
           )}
         </CardContent>
       </Card>
+
+      <DeleteImportDialog log={deleting} onClose={() => setDeleting(null)} />
     </div>
+  );
+}
+
+function DeleteImportDialog({ log, onClose }: { log: PredictionImportLogRow | null; onClose: () => void }) {
+  const deleteImport = useDeletePredictionImportLog();
+
+  return (
+    <Dialog open={Boolean(log)} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete {log?.fileName}?</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          This removes the import record and any predicted-sale rows it created or last updated. This can&apos;t be undone.
+        </p>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={deleteImport.isPending}
+            onClick={() => {
+              if (!log) return;
+              deleteImport.mutate(log.id, { onSuccess: onClose });
+            }}
+          >
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

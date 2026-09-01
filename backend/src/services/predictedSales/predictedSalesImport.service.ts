@@ -2,6 +2,7 @@ import { Workbook } from 'exceljs';
 import { SyncStatus } from '@prisma/client';
 import { prisma } from '../../config/db';
 import { parsePagination, toSkipTake, paginationMeta } from '../../utils/pagination';
+import { AppError } from '../../utils/apiResponse';
 
 // Sheet name -> outlet rid. Sheet names reflect the outlet names at the time the
 // forecast was built, which may no longer match the live Outlet.name (e.g. "Capiche
@@ -37,6 +38,7 @@ interface PendingUpsert {
   stockDate: string;
   predictedQty: number;
   source: string;
+  importLogId: string;
 }
 
 export interface SkippedSheet {
@@ -102,8 +104,15 @@ async function chunkedUpsert(rows: PendingUpsert[]): Promise<{ created: number; 
         }
         return prisma.predictedSale.upsert({
           where: { outletId_itemName_stockDate: { outletId: r.outletId, itemName: r.itemName, stockDate: new Date(r.stockDate) } },
-          create: { outletId: r.outletId, itemName: r.itemName, stockDate: new Date(r.stockDate), predictedQty: r.predictedQty, source: r.source },
-          update: { predictedQty: r.predictedQty, source: r.source },
+          create: {
+            outletId: r.outletId,
+            itemName: r.itemName,
+            stockDate: new Date(r.stockDate),
+            predictedQty: r.predictedQty,
+            source: r.source,
+            importLogId: r.importLogId,
+          },
+          update: { predictedQty: r.predictedQty, source: r.source, importLogId: r.importLogId },
         });
       })
     );
@@ -171,7 +180,7 @@ export async function parseAndImportPredictionWorkbook(
         for (const col of columns) {
           const raw = row.getCell(col.index).value;
           const qty = typeof raw === 'number' ? raw : Number(raw ?? 0);
-          pending.push({ outletId, itemName: col.itemName, stockDate: dateStr, predictedQty: qty, source: fileName });
+          pending.push({ outletId, itemName: col.itemName, stockDate: dateStr, predictedQty: qty, source: fileName, importLogId: log.id });
         }
       });
       sheetsProcessed++;
@@ -260,4 +269,19 @@ export async function listPredictionImportLogs(query: PredictionImportLogQuery) 
     })),
     meta: paginationMeta(pagination, total),
   };
+}
+
+/**
+ * Deletes an import log and every PredictedSale row still linked to it (via
+ * importLogId, cascaded at the DB level). Imports from before that link existed
+ * have no linked rows, so deleting one of those just removes the log entry —
+ * there's no way to know which rows an untracked import touched.
+ */
+export async function deletePredictionImport(id: string) {
+  const log = await prisma.predictionImportLog.findUnique({ where: { id } });
+  if (!log) throw new AppError('Import log not found', 404);
+
+  const rowsDeleted = await prisma.predictedSale.count({ where: { importLogId: id } });
+  await prisma.predictionImportLog.delete({ where: { id } });
+  return { rowsDeleted };
 }

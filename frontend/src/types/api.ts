@@ -190,6 +190,7 @@ export interface ReconciliationRow {
   salesToday: number;
   predictedSales: number;
   poToday: number;
+  poNextDay: number;
   factualClosingAI: number;
   nextDayOpening: number;
   salesVariance: number;

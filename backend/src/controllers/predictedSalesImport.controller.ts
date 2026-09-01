@@ -6,6 +6,7 @@ import {
   parseAndImportPredictionWorkbook,
   getPredictionSummary,
   listPredictionImportLogs,
+  deletePredictionImport,
 } from '../services/predictedSales/predictedSalesImport.service';
 
 const XLSX_MIME_TYPES = new Set([
@@ -40,4 +41,9 @@ export const getPredictionSummaryHandler = asyncHandler(async (_req: Request, re
 export const listPredictionImportLogsHandler = asyncHandler(async (req: Request, res: Response) => {
   const { rows, meta } = await listPredictionImportLogs(req.query as Record<string, string>);
   return ok(res, rows, meta);
+});
+
+export const deletePredictionImportLogHandler = asyncHandler(async (req: Request, res: Response) => {
+  const result = await deletePredictionImport(req.params.id);
+  return ok(res, { removed: true, rowsDeleted: result.rowsDeleted });
 });
