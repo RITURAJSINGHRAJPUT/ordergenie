@@ -185,6 +185,7 @@ export interface ReconciliationRow {
   classAItemId: string;
   unit: string | null;
   hasManualEntry: boolean;
+  openingAutoFilled: boolean;
   opening: number;
   actualClosing: number;
   salesToday: number;

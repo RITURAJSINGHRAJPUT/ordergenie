@@ -210,6 +210,10 @@ model Inventory {
   unit              String?
   store             String?
   openingStock      Decimal    @default(0) @db.Decimal(12, 2)
+  // True while openingStock is still machine-derived (previous day's closing + that
+  // day's PO) and should keep tracking those inputs. Cleared the moment a human edits
+  // Opening, after which the value is theirs and never recomputed.
+  openingAutoFilled Boolean    @default(false)
   purchasedQty      Decimal    @default(0) @db.Decimal(12, 2)
   consumedQty       Decimal    @default(0) @db.Decimal(12, 2)
   closingStock      Decimal    @default(0) @db.Decimal(12, 2)
@@ -287,6 +291,8 @@ model PurchaseOrder {
   @@unique([outletId, poNumber])
   @@unique([outletId, petpoojaPurchaseId])
   @@index([outletId, orderDate])
+  // Reconciliation attributes POs by expectedDate and queries it twice per page load.
+  @@index([outletId, expectedDate])
 }
 
 model PurchaseOrderItem {

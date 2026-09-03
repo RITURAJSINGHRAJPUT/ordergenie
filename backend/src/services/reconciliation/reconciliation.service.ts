@@ -56,8 +56,10 @@ function parseDateParam(value: string | undefined): Date {
  * window would make rows appear/disappear as the selected date changes, which
  * reads as "missing data" rather than "didn't sell that day."
  */
-async function getSelectedIngredientUniverse(outletId: string, brand: string, day: Date): Promise<Map<string, string>> {
-  const entries = await listClassAItems(brand);
+function buildIngredientUniverse(
+  entries: Awaited<ReturnType<typeof listClassAItems>>,
+  categorySoldItems: { itemName: string; category: string | null }[]
+): Map<string, string> {
   const map = new Map<string, string>();
 
   for (const entry of entries) {
@@ -66,24 +68,30 @@ async function getSelectedIngredientUniverse(outletId: string, brand: string, da
     }
   }
 
-  const categoryEntries = entries.filter((e) => e.type === ClassAItemType.CATEGORY);
-  if (categoryEntries.length > 0) {
-    const items = await prisma.saleItem.findMany({
-      where: { sale: { outletId, orderDate: { lte: day } }, category: { not: null } },
-      select: { itemName: true, category: true },
-      distinct: ['itemName'],
-    });
-    for (const catEntry of categoryEntries) {
-      const needle = catEntry.value.toLowerCase();
-      for (const item of items) {
-        if (!map.has(item.itemName) && item.category?.toLowerCase().includes(needle)) {
-          map.set(item.itemName, catEntry.id);
-        }
+  for (const catEntry of entries.filter((e) => e.type === ClassAItemType.CATEGORY)) {
+    const needle = catEntry.value.toLowerCase();
+    for (const item of categorySoldItems) {
+      if (!map.has(item.itemName) && item.category?.toLowerCase().includes(needle)) {
+        map.set(item.itemName, catEntry.id);
       }
     }
   }
 
   return map;
+}
+
+/**
+ * Distinct sold items with a category, for expanding CATEGORY-type Class A entries.
+ * Issued unconditionally so it can sit in the same parallel batch as everything else —
+ * the round-trip to a remote database costs far more than the occasional wasted query
+ * for a brand that tracks no categories.
+ */
+function getCategorySoldItems(outletId: string, day: Date) {
+  return prisma.saleItem.findMany({
+    where: { sale: { outletId, orderDate: { lte: day } }, category: { not: null } },
+    select: { itemName: true, category: true },
+    distinct: ['itemName'],
+  });
 }
 
 interface RecipeRule {
@@ -133,19 +141,32 @@ function applyRecipesToSalesMap(salesByItem: Map<string, Map<string, number>>, r
   }
 }
 
-/** itemName -> (YYYY-MM-DD -> summed quantity), covering [from, to] inclusive. */
+/**
+ * itemName -> (YYYY-MM-DD -> summed quantity), covering [from, to] inclusive.
+ *
+ * Raw SQL rather than a nested `select`, for two reasons: reading orderDate through the
+ * relation makes Prisma issue a second query against Sale (a whole extra round-trip), and
+ * grouping in Postgres returns one row per item-day instead of every individual line item.
+ * `to_char` formats the day key server-side so a `date` column can't drift a day through
+ * JS timezone conversion.
+ */
 async function getSalesByItemAndDay(outletId: string, from: Date, to: Date): Promise<Map<string, Map<string, number>>> {
-  const rows = await prisma.saleItem.findMany({
-    where: { sale: { outletId, orderDate: { gte: from, lte: to } } },
-    select: { itemName: true, quantity: true, sale: { select: { orderDate: true } } },
-  });
+  const rows = await prisma.$queryRaw<{ itemName: string; day: string; qty: Prisma.Decimal }[]>`
+    SELECT si."itemName" AS "itemName",
+           to_char(s."orderDate", 'YYYY-MM-DD') AS day,
+           SUM(si.quantity) AS qty
+    FROM "SaleItem" si
+    JOIN "Sale" s ON s.id = si."saleId"
+    WHERE s."outletId" = ${outletId}
+      AND s."orderDate" >= ${from}
+      AND s."orderDate" <= ${to}
+    GROUP BY si."itemName", to_char(s."orderDate", 'YYYY-MM-DD')
+  `;
 
   const map = new Map<string, Map<string, number>>();
   for (const r of rows) {
-    const key = dayKeyOf(r.sale.orderDate);
     if (!map.has(r.itemName)) map.set(r.itemName, new Map());
-    const inner = map.get(r.itemName)!;
-    inner.set(key, (inner.get(key) ?? 0) + toNum(r.quantity));
+    map.get(r.itemName)!.set(r.day, toNum(r.qty));
   }
   return map;
 }
@@ -153,21 +174,26 @@ async function getSalesByItemAndDay(outletId: string, from: Date, to: Date): Pro
 /**
  * Real, imported forecast data for exactly this outlet+day (see
  * scripts/import-predicted-sales.ts), keyed by itemName -> predicted qty.
- * Wrapped into the same shape applyRecipesToSalesMap expects (a single day's
- * entry) so Big Dough/Small Dough-style recipes sum imported predictions the
- * same way they sum real sales, with no separate matching logic.
  */
-async function getPredictedSalesByItemAndDay(
-  outletId: string,
-  day: Date,
-  dayKey: string,
-  recipesByIngredient: Map<string, RecipeRule[]>
-): Promise<Map<string, number>> {
-  const rows = await prisma.predictedSale.findMany({
+function getPredictedSalesRows(outletId: string, day: Date) {
+  return prisma.predictedSale.findMany({
     where: { outletId, stockDate: day },
     select: { itemName: true, predictedQty: true },
   });
+}
 
+/**
+ * Applied after the fetch rather than inside it, so the recipe rules don't have to be
+ * awaited before the main batch can start — that ordering cost a whole serial round-trip.
+ * Wrapping into the shape applyRecipesToSalesMap expects (a single day's entry) lets
+ * Big Dough/Small Dough-style recipes sum imported predictions exactly the way they sum
+ * real sales, with no separate matching logic.
+ */
+function resolvePredictedSales(
+  rows: { itemName: string; predictedQty: Prisma.Decimal }[],
+  dayKey: string,
+  recipesByIngredient: Map<string, RecipeRule[]>
+): Map<string, number> {
   const wrapped = new Map<string, Map<string, number>>();
   for (const r of rows) {
     wrapped.set(r.itemName, new Map([[dayKey, toNum(r.predictedQty)]]));
@@ -221,6 +247,7 @@ interface ManualEntry {
   opening: number;
   actualClosing: number;
   unit: string | null;
+  openingAutoFilled: boolean;
 }
 
 async function getManualEntries(outletId: string, day: Date): Promise<Map<string, ManualEntry>> {
@@ -229,9 +256,71 @@ async function getManualEntries(outletId: string, day: Date): Promise<Map<string
   });
   const map = new Map<string, ManualEntry>();
   for (const r of rows) {
-    map.set(r.itemName, { opening: toNum(r.openingStock), actualClosing: toNum(r.closingStock), unit: r.unit });
+    map.set(r.itemName, {
+      opening: toNum(r.openingStock),
+      actualClosing: toNum(r.closingStock),
+      unit: r.unit,
+      openingAutoFilled: r.openingAutoFilled,
+    });
   }
   return map;
+}
+
+/**
+ * Opening carries over: a day's opening stock is the previous day's actual closing plus
+ * whatever PO is due that day. Rows seeded this way stay machine-owned (openingAutoFilled)
+ * and are refreshed on every load, so a PO raised later in the day still lands — a one-shot
+ * write at rollover would miss it. The moment someone edits Opening by hand the flag clears
+ * (see upsertReconciliationEntry) and this leaves the row alone forever after.
+ *
+ * Deliberately does nothing when the previous day has no saved entry: inventing an opening
+ * from an absent closing would make an unrecorded day indistinguishable from one that
+ * genuinely closed at zero.
+ */
+async function carryForwardOpenings(
+  outletId: string,
+  day: Date,
+  itemNames: Iterable<string>,
+  today: Map<string, ManualEntry>,
+  previousDay: Map<string, ManualEntry>,
+  poByItem: Map<string, number>
+): Promise<void> {
+  const writes: Prisma.PrismaPromise<unknown>[] = [];
+
+  for (const itemName of itemNames) {
+    const previous = previousDay.get(itemName);
+    if (!previous) continue;
+
+    const derived = previous.actualClosing + (poByItem.get(itemName) ?? 0);
+    const current = today.get(itemName);
+    if (current && !current.openingAutoFilled) continue;
+    // Nothing changed since the last load — don't write on every page view.
+    if (current && current.opening === derived) continue;
+
+    today.set(itemName, {
+      opening: derived,
+      actualClosing: current?.actualClosing ?? 0,
+      unit: current?.unit ?? null,
+      openingAutoFilled: true,
+    });
+
+    writes.push(
+      prisma.inventory.upsert({
+        where: { outletId_itemName_stockDate: { outletId, itemName, stockDate: day } },
+        create: {
+          outletId,
+          itemName,
+          stockDate: day,
+          source: DataSource.MANUAL,
+          openingStock: derived,
+          openingAutoFilled: true,
+        },
+        update: { openingStock: derived, openingAutoFilled: true, source: DataSource.MANUAL },
+      })
+    );
+  }
+
+  if (writes.length > 0) await prisma.$transaction(writes);
 }
 
 export interface ReconciliationRowInputs {
@@ -239,6 +328,7 @@ export interface ReconciliationRowInputs {
   classAItemId: string;
   unit: string | null;
   hasManualEntry: boolean;
+  openingAutoFilled: boolean;
   opening: number;
   actualClosing: number;
   salesToday: number;
@@ -305,19 +395,40 @@ export async function getReconciliationDashboard(query: ReconciliationQuery) {
   const dayKey = dayKeyOf(day);
   const windowStart = addDays(day, -PREDICTED_SALES_WINDOW_DAYS);
 
-  const recipesByIngredient = await getRecipeRules(brand);
-
-  const [universe, salesByItem, poByItem, poNextDayByItem, manualEntries, predictedByItem, unitByItem] = await Promise.all([
-    getSelectedIngredientUniverse(outletId, brand, day),
+  // Every read the page needs, issued at once. Nothing is awaited ahead of this batch:
+  // against a remote database the serial round-trips, not the queries, are what cost time.
+  const [
+    recipesByIngredient,
+    classAEntries,
+    categorySoldItems,
+    salesByItem,
+    poByItem,
+    poNextDayByItem,
+    manualEntries,
+    prevDayEntries,
+    predictedRows,
+    unitByItem,
+  ] = await Promise.all([
+    getRecipeRules(brand),
+    listClassAItems(brand),
+    getCategorySoldItems(outletId, day),
     getSalesByItemAndDay(outletId, windowStart, day),
     getPOByItem(outletId, day),
     // Next Day Opening is built from stock due to arrive tomorrow, not today's delivery.
     getPOByItem(outletId, addDays(day, 1)),
     getManualEntries(outletId, day),
-    getPredictedSalesByItemAndDay(outletId, day, dayKey, recipesByIngredient),
+    // Opening carries over from here — see carryForwardOpenings.
+    getManualEntries(outletId, addDays(day, -1)),
+    getPredictedSalesRows(outletId, day),
     getUnitFromPO(outletId),
   ]);
+
+  const universe = buildIngredientUniverse(classAEntries, categorySoldItems);
+  const predictedByItem = resolvePredictedSales(predictedRows, dayKey, recipesByIngredient);
   applyRecipesToSalesMap(salesByItem, recipesByIngredient);
+
+  // Mutates manualEntries in place, so the rows below already see the carried-over openings.
+  await carryForwardOpenings(outletId, day, universe.keys(), manualEntries, prevDayEntries, poByItem);
 
   const rows = Array.from(universe.entries())
     .map(([itemName, classAItemId]) => {
@@ -345,6 +456,7 @@ export async function getReconciliationDashboard(query: ReconciliationQuery) {
           classAItemId,
           unit: unitByItem.get(itemName) ?? manual?.unit ?? null,
           hasManualEntry: Boolean(manual),
+          openingAutoFilled: manual?.openingAutoFilled ?? false,
           opening: manual?.opening ?? 0,
           actualClosing: manual?.actualClosing ?? 0,
           salesToday,
@@ -382,9 +494,21 @@ export async function upsertReconciliationEntry(input: UpsertReconciliationEntry
     throw new AppError('At least one of opening or actualClosing is required', 400);
   }
   const day = parseDateParam(input.date);
+  const existing = await prisma.inventory.findUnique({
+    where: { outletId_itemName_stockDate: { outletId: input.outletId, itemName: input.itemName, stockDate: day } },
+    select: { openingStock: true },
+  });
 
   const updateData: Prisma.InventoryUpdateInput = { source: DataSource.MANUAL };
-  if (input.opening !== undefined) updateData.openingStock = input.opening;
+  if (input.opening !== undefined) {
+    updateData.openingStock = input.opening;
+    // Save posts both fields even when only Actual Closing was touched, so hand off ownership
+    // of Opening only when the number actually moved — otherwise a closing edit would freeze
+    // a carried-over opening and stop later POs counting toward it.
+    if (!existing || toNum(existing.openingStock) !== input.opening) {
+      updateData.openingAutoFilled = false;
+    }
+  }
   if (input.actualClosing !== undefined) {
     updateData.closingStock = input.actualClosing;
     updateData.currentStock = input.actualClosing;
@@ -402,6 +526,7 @@ export async function upsertReconciliationEntry(input: UpsertReconciliationEntry
       stockDate: day,
       source: DataSource.MANUAL,
       openingStock: input.opening ?? 0,
+      openingAutoFilled: false,
       closingStock: input.actualClosing ?? 0,
       currentStock: input.actualClosing ?? 0,
     },

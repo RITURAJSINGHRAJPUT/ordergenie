@@ -35,6 +35,28 @@ function varianceTone(variance: number, base: number): 'alert' | 'normal' {
   return pct > VARIANCE_ALERT_PCT ? 'alert' : 'normal';
 }
 
+/**
+ * Three states, not two: no row at all ("Not entered"), a row whose Opening was carried
+ * over from yesterday and is still tracking ("Auto"), or a row someone has filled in.
+ */
+function entryStateBadge(row: ReconciliationRow, className: string) {
+  if (!row.hasManualEntry) {
+    return (
+      <Badge variant="outline" className={className}>
+        Not entered
+      </Badge>
+    );
+  }
+  if (row.openingAutoFilled) {
+    return (
+      <Badge variant="secondary" className={className} title="Opening carried over from yesterday's closing + today's PO">
+        Auto
+      </Badge>
+    );
+  }
+  return null;
+}
+
 function varianceBadge(variance: number, base: number) {
   const alert = varianceTone(variance, base) === 'alert';
   return (
@@ -103,7 +125,8 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
           <CardTitle className="text-base">Ingredient Reconciliation</CardTitle>
           <CardDescription>
             Showing reconciliation for <strong>{formatDate(date)}</strong> — items selected in{' '}
-            <strong>Class A Items</strong> for {brand}. Opening/Actual Closing are manual, Sales/PO are synced. Closing
+            <strong>Class A Items</strong> for {brand}. Opening carries over automatically as yesterday&apos;s Actual
+            Closing + today&apos;s PO until you edit it; Actual Closing is manual, Sales/PO are synced. Closing
             (AI) = Opening − Sales, Wastage = Closing (AI) − Sales, Next Day Opening = Actual Closing + Next Day PO. PO
             is what&apos;s due today, Next Day PO what&apos;s due the following day. Sales (AI) = forecast or 7-day avg
             +15%. Change date above.
@@ -202,7 +225,7 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
                   <TableBody>
                     {data.rows.map((row) => (
                       <ReconciliationTableRow
-                        key={row.itemName}
+                        key={`${date}|${row.itemName}`}
                         row={row}
                         outletId={outletId}
                         brand={brand}
@@ -219,7 +242,7 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
               <div className="space-y-3 md:hidden">
                 {data.rows.map((row) => (
                   <ReconciliationCard
-                    key={row.itemName}
+                    key={`${date}|${row.itemName}`}
                     row={row}
                     outletId={outletId}
                     brand={brand}
@@ -287,11 +310,7 @@ function ReconciliationTableRow({ row, outletId, brand, date, canManageSelection
     <TableRow>
       <TableCell className="font-medium">
         {row.itemName}
-        {!row.hasManualEntry && (
-          <Badge variant="outline" className="ml-2">
-            Not entered
-          </Badge>
-        )}
+        {entryStateBadge(row, 'ml-2')}
       </TableCell>
       <TableCell>{row.unit ?? '—'}</TableCell>
       <TableCell className="text-center">
@@ -376,11 +395,7 @@ function ReconciliationCard({ row, outletId, brand, date, canManageSelection, ca
           <div className="font-medium leading-snug">
             {row.itemName}
             {row.unit && <span className="ml-1.5 text-xs text-muted-foreground">({row.unit})</span>}
-            {!row.hasManualEntry && (
-              <Badge variant="outline" className="ml-2 align-middle">
-                Not entered
-              </Badge>
-            )}
+            {entryStateBadge(row, 'ml-2 align-middle')}
           </div>
           {canManageSelection && (
             <button
