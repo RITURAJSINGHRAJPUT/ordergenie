@@ -195,8 +195,7 @@ export interface ReconciliationRow {
   factualClosingAI: number;
   nextDayOpening: number;
   salesVariance: number;
-  closingVariance: number;
-  derivedWastage: number;
+  wastage: number;
   stockDate: string;
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -17,6 +17,7 @@ import { useResettingPage } from '@/hooks/useResettingPage';
 import { useFilterStore } from '@/store/filterStore';
 import { useAuthStore } from '@/store/authStore';
 import { formatDate, formatNumber } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import type { ReconciliationRow } from '@/types/api';
 
 const VARIANCE_ALERT_PCT = 10;
@@ -70,29 +71,54 @@ function varianceBadge(variance: number, base: number) {
 /** Shared editable Opening/Actual Closing + save state, used by both the table row (tablet/desktop) and card (mobile) renderings of the same data row. */
 function useRowEditor(row: ReconciliationRow, outletId: string, date: string) {
   const upsert = useUpsertReconciliationEntry();
-  const [opening, setOpening] = useState(String(row.opening));
-  const [actualClosing, setActualClosing] = useState(String(row.actualClosing));
+  const [opening, setOpeningRaw] = useState(String(row.opening));
+  const [actualClosing, setActualClosingRaw] = useState(String(row.actualClosing));
+  const [justSaved, setJustSaved] = useState(false);
 
   const dirty = Number(opening || 0) !== row.opening || Number(actualClosing || 0) !== row.actualClosing;
 
-  function handleSave() {
-    upsert.mutate({
-      outletId,
-      itemName: row.itemName,
-      date,
-      opening: Number(opening || 0),
-      actualClosing: Number(actualClosing || 0),
-    });
+  function handleSave(silent = false) {
+    upsert.mutate(
+      {
+        outletId,
+        itemName: row.itemName,
+        date,
+        opening: Number(opening || 0),
+        actualClosing: Number(actualClosing || 0),
+        silent,
+      },
+      { onSuccess: () => setJustSaved(true) }
+    );
+  }
+
+  // Auto-saves 3s after the user stops typing, so entering several rows doesn't need a
+  // manual click each time — the Save button still works immediately for an instant commit.
+  useEffect(() => {
+    if (!dirty) return;
+    const timer = setTimeout(() => handleSave(true), 3000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opening, actualClosing]);
+
+  function setOpening(v: string) {
+    setOpeningRaw(sanitizeQty(v));
+    setJustSaved(false);
+  }
+
+  function setActualClosing(v: string) {
+    setActualClosingRaw(sanitizeQty(v));
+    setJustSaved(false);
   }
 
   return {
     opening,
-    setOpening: (v: string) => setOpening(sanitizeQty(v)),
+    setOpening,
     actualClosing,
-    setActualClosing: (v: string) => setActualClosing(sanitizeQty(v)),
+    setActualClosing,
     dirty,
     saving: upsert.isPending,
-    handleSave,
+    justSaved,
+    handleSave: () => handleSave(false),
   };
 }
 
@@ -127,7 +153,7 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
             Showing reconciliation for <strong>{formatDate(date)}</strong> — items selected in{' '}
             <strong>Class A Items</strong> for {brand}. Opening carries over automatically as yesterday&apos;s Actual
             Closing + today&apos;s PO until you edit it; Actual Closing is manual, Sales/PO are synced. Closing
-            (AI) = Opening − Sales, Wastage = Closing (AI) − Sales, Next Day Opening = Actual Closing + Next Day PO. PO
+            (AI) = Opening − Sales, Wastage = Actual Closing − Closing (AI), Next Day Opening = Actual Closing + Next Day PO. PO
             is what&apos;s due today, Next Day PO what&apos;s due the following day. Sales (AI) = forecast or 7-day avg
             +15%. Change date above.
           </CardDescription>
@@ -207,13 +233,6 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
                       <TableHead className="text-center">
                         <div className="leading-tight">
                           Sales
-                          <br />
-                          Variance
-                        </div>
-                      </TableHead>
-                      <TableHead className="text-center">
-                        <div className="leading-tight">
-                          Closing
                           <br />
                           Variance
                         </div>
@@ -348,14 +367,17 @@ function ReconciliationTableRow({ row, outletId, brand, date, canManageSelection
       <TableCell className="text-center">{formatNumber(row.poNextDay)}</TableCell>
       <TableCell className="text-center">{formatNumber(row.nextDayOpening)}</TableCell>
       <TableCell className="text-center">{varianceBadge(row.salesVariance, row.predictedSales)}</TableCell>
-      <TableCell className="text-center">{varianceBadge(row.closingVariance, row.factualClosingAI)}</TableCell>
-      <TableCell className="text-center">
-        <Badge variant={row.derivedWastage > 0 ? 'destructive' : 'secondary'}>{formatNumber(row.derivedWastage)}</Badge>
-      </TableCell>
+      <TableCell className="text-center">{varianceBadge(row.wastage, row.factualClosingAI)}</TableCell>
       <TableCell>
         <div className="flex items-center gap-1">
           {canEdit && (
-            <Button size="sm" variant="outline" disabled={!editor.dirty || editor.saving} onClick={editor.handleSave}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!editor.dirty || editor.saving}
+              onClick={editor.handleSave}
+              className={cn(editor.justSaved && 'border-green-500 bg-green-50 text-green-700 hover:bg-green-100')}
+            >
               Save
             </Button>
           )}
@@ -453,11 +475,10 @@ function ReconciliationCard({ row, outletId, brand, date, canManageSelection, ca
             tone={varianceTone(row.salesVariance, row.predictedSales)}
           />
           <StatTile
-            label="Closing Variance"
-            value={`${row.closingVariance > 0 ? '+' : ''}${formatNumber(row.closingVariance)}`}
-            tone={varianceTone(row.closingVariance, row.factualClosingAI)}
+            label="Wastage"
+            value={`${row.wastage > 0 ? '+' : ''}${formatNumber(row.wastage)}`}
+            tone={varianceTone(row.wastage, row.factualClosingAI)}
           />
-          <StatTile label="Wastage" value={formatNumber(row.derivedWastage)} tone={row.derivedWastage > 0 ? 'alert' : 'normal'} />
         </div>
 
         {canEdit && (
@@ -466,7 +487,7 @@ function ReconciliationCard({ row, outletId, brand, date, canManageSelection, ca
             variant="outline"
             disabled={!editor.dirty || editor.saving}
             onClick={editor.handleSave}
-            className="w-full"
+            className={cn('w-full', editor.justSaved && 'border-green-500 bg-green-50 text-green-700 hover:bg-green-100')}
           >
             Save
           </Button>

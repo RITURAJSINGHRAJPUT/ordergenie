@@ -23,14 +23,17 @@ export interface UpsertReconciliationEntryInput {
   date: string;
   opening?: number;
   actualClosing?: number;
+  /** Skips the success toast — used for debounced auto-saves so typing doesn't spam toasts. */
+  silent?: boolean;
 }
 
 export function useUpsertReconciliationEntry() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: UpsertReconciliationEntryInput) => apiClient.post('/reconciliation/entries', input),
-    onSuccess: () => {
-      toast.success('Saved');
+    mutationFn: async ({ outletId, itemName, unit, date, opening, actualClosing }: UpsertReconciliationEntryInput) =>
+      apiClient.post('/reconciliation/entries', { outletId, itemName, unit, date, opening, actualClosing }),
+    onSuccess: (_data, variables) => {
+      if (!variables.silent) toast.success('Saved');
       qc.invalidateQueries({ queryKey: ['reconciliation'] });
     },
     onError: () => toast.error('Failed to save'),

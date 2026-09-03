@@ -341,8 +341,7 @@ export interface ReconciliationRow extends ReconciliationRowInputs {
   factualClosingAI: number;
   nextDayOpening: number;
   salesVariance: number;
-  closingVariance: number;
-  derivedWastage: number;
+  wastage: number;
   stockDate: string;
 }
 
@@ -363,8 +362,8 @@ export function computeReconciliationRow(inputs: ReconciliationRowInputs, stockD
   const factualClosingAI = inputs.opening - inputs.salesToday;
   const nextDayOpening = inputs.poNextDay + inputs.actualClosing;
   const salesVariance = inputs.salesToday - inputs.predictedSales;
-  const closingVariance = inputs.actualClosing - factualClosingAI;
-  const derivedWastage = factualClosingAI - inputs.salesToday;
+  // Stock unaccounted for against the expected closing — negative when short, positive on surplus.
+  const wastage = inputs.actualClosing - factualClosingAI;
 
   return {
     ...inputs,
@@ -372,8 +371,7 @@ export function computeReconciliationRow(inputs: ReconciliationRowInputs, stockD
     factualClosingAI: round2(factualClosingAI),
     nextDayOpening: round2(nextDayOpening),
     salesVariance: round2(salesVariance),
-    closingVariance: round2(closingVariance),
-    derivedWastage: round2(derivedWastage),
+    wastage: round2(wastage),
     stockDate,
   };
 }
