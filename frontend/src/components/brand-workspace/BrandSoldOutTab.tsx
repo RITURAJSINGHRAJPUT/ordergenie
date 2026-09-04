@@ -91,7 +91,13 @@ export function BrandSoldOutTab({ brand, outletId }: { brand: string; outletId: 
                 </TableHeader>
                 <TableBody>
                   {data.rows.map((row) => (
-                    <SoldOutRowCells key={row.itemName} row={row} outletId={outletId} date={date} canEdit={!isViewer} />
+                    <SoldOutRowCells
+                      key={`${outletId}|${date}|${row.itemName}`}
+                      row={row}
+                      outletId={outletId}
+                      date={date}
+                      canEdit={!isViewer}
+                    />
                   ))}
                 </TableBody>
               </Table>
@@ -152,6 +158,14 @@ function SoldOutRowCells({
 }) {
   const upsert = useUpsertSoldOutEntry();
   const [missedQty, setMissedQty] = useState(String(row.missedQty));
+
+  // useState only reads its initial value, so re-seed when the server number moves — otherwise
+  // a refetch (or another user's save) leaves the box showing a stale figure.
+  const [serverMissedQty, setServerMissedQty] = useState(row.missedQty);
+  if (serverMissedQty !== row.missedQty) {
+    setServerMissedQty(row.missedQty);
+    setMissedQty(String(row.missedQty));
+  }
 
   const dirty = Number(missedQty || 0) !== row.missedQty;
 

@@ -75,6 +75,18 @@ function useRowEditor(row: ReconciliationRow, outletId: string, date: string) {
   const [actualClosing, setActualClosingRaw] = useState(String(row.actualClosing));
   const [justSaved, setJustSaved] = useState(false);
 
+  // useState only reads its initial value, so a row whose server numbers change underneath it
+  // (the Opening carry-forward picking up a late PO, or someone else saving) would keep showing
+  // the old ones. Re-seed when the *server* value moves — not on every render — so a refetch
+  // that returns what's already there can't interrupt typing. Adjust-during-render rather than
+  // an effect, matching useResettingPage.
+  const [serverValues, setServerValues] = useState({ opening: row.opening, actualClosing: row.actualClosing });
+  if (serverValues.opening !== row.opening || serverValues.actualClosing !== row.actualClosing) {
+    setServerValues({ opening: row.opening, actualClosing: row.actualClosing });
+    setOpeningRaw(String(row.opening));
+    setActualClosingRaw(String(row.actualClosing));
+  }
+
   const dirty = Number(opening || 0) !== row.opening || Number(actualClosing || 0) !== row.actualClosing;
 
   function handleSave(silent = false) {
@@ -244,7 +256,7 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
                   <TableBody>
                     {data.rows.map((row) => (
                       <ReconciliationTableRow
-                        key={`${date}|${row.itemName}`}
+                        key={`${outletId}|${date}|${row.itemName}`}
                         row={row}
                         outletId={outletId}
                         brand={brand}
@@ -261,7 +273,7 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
               <div className="space-y-3 md:hidden">
                 {data.rows.map((row) => (
                   <ReconciliationCard
-                    key={`${date}|${row.itemName}`}
+                    key={`${outletId}|${date}|${row.itemName}`}
                     row={row}
                     outletId={outletId}
                     brand={brand}
