@@ -4,18 +4,43 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { usePurchaseOrderDetail } from '@/hooks/usePurchaseOrders';
+import { Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { usePurchaseOrderDetail, usePurchaseOrderPdfDownload } from '@/hooks/usePurchaseOrders';
 import { formatCurrency, formatDate, formatNumber } from '@/lib/format';
 import { STATUS_VARIANT } from './status';
 
-export function PurchaseOrderDetailDialog({ id, onClose }: { id: string | null; onClose: () => void }) {
+export function PurchaseOrderDetailDialog({
+  id,
+  onClose,
+  allowPdfDownload = false,
+}: {
+  id: string | null;
+  onClose: () => void;
+  /** Off by default — only the API Explorer offers the PDF today. */
+  allowPdfDownload?: boolean;
+}) {
   const { data, isLoading } = usePurchaseOrderDetail(id);
+  const download = usePurchaseOrderPdfDownload();
 
   return (
     <Dialog open={Boolean(id)} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[85vh] sm:max-w-3xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{data?.poNumber ?? 'Purchase Order'}</DialogTitle>
+          <div className="flex items-center justify-between gap-3 pr-6">
+            <DialogTitle>{data?.poNumber ?? 'Purchase Order'}</DialogTitle>
+            {allowPdfDownload && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!data || download.isPending}
+                onClick={() => data && download.mutate({ id: data.id, poNumber: data.poNumber })}
+              >
+                <Download className="mr-1.5 h-4 w-4" />
+                {download.isPending ? 'Preparing...' : 'Download PDF'}
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         {isLoading || !data ? (

@@ -1,5 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { apiClient } from '@/lib/api-client';
+import { triggerBlobDownload } from '@/lib/download';
 import { useRangeParams, type RangeParamOverrides } from '@/hooks/useRangeParams';
 import type {
   ApiEnvelope,
@@ -55,6 +57,17 @@ export function usePurchaseOrderItemsByDay(options?: UsePurchaseOrderItemsByDayO
       });
       return res.data.data;
     },
+  });
+}
+
+/** Downloads one PO as a PDF, mirroring useReportDownload's blob-download path. */
+export function usePurchaseOrderPdfDownload() {
+  return useMutation({
+    mutationFn: async ({ id, poNumber }: { id: string; poNumber: string }) => {
+      const res = await apiClient.get(`/purchase-orders/${id}/pdf`, { responseType: 'blob' });
+      triggerBlobDownload(res.data as Blob, `${poNumber}.pdf`);
+    },
+    onError: () => toast.error('Failed to generate PDF'),
   });
 }
 

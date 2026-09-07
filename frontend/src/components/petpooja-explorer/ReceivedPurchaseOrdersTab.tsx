@@ -168,7 +168,7 @@ export function ReceivedPurchaseOrdersTab() {
         </CardContent>
       </Card>
 
-      <PurchaseOrderDetailDialog id={selectedId} onClose={() => setSelectedId(null)} />
+      <PurchaseOrderDetailDialog id={selectedId} onClose={() => setSelectedId(null)} allowPdfDownload />
     </div>
   );
 }
