@@ -12,7 +12,7 @@ import type {
 export interface UsePurchaseOrdersOptions {
   status?: string;
   overrides?: RangeParamOverrides;
-  dateField?: 'orderDate' | 'petpoojaCreatedAt';
+  dateField?: 'orderDate' | 'petpoojaCreatedAt' | 'expectedDate';
   search?: string;
 }
 
@@ -40,7 +40,7 @@ export function usePurchaseOrders(page: number, pageSize = 12, options?: UsePurc
 
 export interface UsePurchaseOrderItemsByDayOptions {
   overrides?: RangeParamOverrides;
-  dateField?: 'orderDate' | 'petpoojaCreatedAt';
+  dateField?: 'orderDate' | 'petpoojaCreatedAt' | 'expectedDate';
 }
 
 export function usePurchaseOrderItemsByDay(options?: UsePurchaseOrderItemsByDayOptions) {

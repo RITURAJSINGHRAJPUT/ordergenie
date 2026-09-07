@@ -22,10 +22,27 @@ export interface PurchaseOrderQuery {
   search?: string;
 }
 
+/**
+ * Which date a PO list is filtered on. `expectedDate` is the "when is it due to arrive"
+ * view (matching how Reconciliation attributes POs) — but 41% of POs reach us without one,
+ * so those fall back to their order date rather than disappearing from every date.
+ */
+function dateClause(dateField: string | undefined, from: Date, to: Date): Prisma.PurchaseOrderWhereInput {
+  if (dateField === 'petpoojaCreatedAt') return { petpoojaCreatedAt: { gte: from, lte: to } };
+  if (dateField === 'expectedDate') {
+    return {
+      OR: [
+        { expectedDate: { gte: from, lte: to } },
+        { expectedDate: null, orderDate: { gte: from, lte: to } },
+      ],
+    };
+  }
+  return { orderDate: { gte: from, lte: to } };
+}
+
 export async function listPurchaseOrders(query: PurchaseOrderQuery) {
   const pagination = parsePagination(query as unknown as Record<string, unknown>);
   const { from, to } = resolveDateRange(query);
-  const dateField = query.dateField === 'petpoojaCreatedAt' ? 'petpoojaCreatedAt' : 'orderDate';
 
   const where: Prisma.PurchaseOrderWhereInput = {
     ...(query.outletId ? { outletId: query.outletId } : {}),
@@ -33,7 +50,7 @@ export async function listPurchaseOrders(query: PurchaseOrderQuery) {
     ...(query.status ? { status: query.status as PurchaseOrderStatus } : {}),
     ...(query.vendorId ? { vendorId: query.vendorId } : {}),
     ...(query.search ? { poNumber: { contains: query.search, mode: 'insensitive' as const } } : {}),
-    [dateField]: { gte: from, lte: to },
+    ...dateClause(query.dateField, from, to),
   };
 
   const [rows, total] = await Promise.all([
@@ -83,7 +100,7 @@ export async function listPurchaseOrderItemsByDay(query: PurchaseOrderQuery): Pr
     ...(query.outletId ? { outletId: query.outletId } : {}),
     ...(query.brand ? { outlet: { brand: query.brand } } : {}),
     ...(query.status ? { status: query.status as PurchaseOrderStatus } : { status: { not: PurchaseOrderStatus.CANCELLED } }),
-    [dateField]: { gte: from, lte: to },
+    ...dateClause(query.dateField, from, to),
   };
 
   const items = await prisma.purchaseOrderItem.findMany({

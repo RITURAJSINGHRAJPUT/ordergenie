@@ -33,7 +33,13 @@ export function ReceivedPurchaseOrdersTab() {
   const [page, setPage] = useResettingPage(`${status}|${outletId}|${customFrom}|${customTo}|${search}`);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const { data, isLoading, isError } = usePurchaseOrders(page, 12, { status, search: search || undefined });
+  // Filtered by when goods are due to arrive, not when the PO was raised — same basis
+  // Reconciliation uses. See dateClause() in purchaseOrders.service.ts for the fallback.
+  const { data, isLoading, isError } = usePurchaseOrders(page, 12, {
+    status,
+    search: search || undefined,
+    dateField: 'expectedDate',
+  });
 
   return (
     <div className="space-y-4">
@@ -60,7 +66,8 @@ export function ReceivedPurchaseOrdersTab() {
             (get_purchase, every 15 minutes) as goods are actually delivered.
           </>
         )}{' '}
-        This is a read-only view of local data, not a live Petpooja call.
+        This is a read-only view of local data, not a live Petpooja call. The date filter matches{' '}
+        <strong>Expected Date</strong> — POs that arrive without one fall back to their order date.
       </p>
 
       <div className="flex flex-wrap items-end justify-between gap-3">
