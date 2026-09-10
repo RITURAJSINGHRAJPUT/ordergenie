@@ -11,6 +11,7 @@ datasource db {
 // ---------- Enums ----------
 
 enum RoleName {
+  SUPER_ADMIN
   ADMIN
   MANAGEMENT
   OUTLET_MANAGER
@@ -122,6 +123,9 @@ model User {
   // is derived from that outlet, so the two can never disagree. Roles that require an
   // outlet (HEAD_CHEF/OUTLET_MANAGER) stay scoped by outletId, not by this.
   brand        String?
+  // Pages this user may reach beyond what their role allows. Additive only — today the sole
+  // grantable value is 'sales-forecast', an array so a second page needs no migration.
+  pageGrants   String[] @default([])
   isActive     Boolean   @default(true)
   lastLoginAt  DateTime?
   createdAt    DateTime  @default(now())

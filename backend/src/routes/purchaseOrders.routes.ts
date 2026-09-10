@@ -11,7 +11,7 @@ import {
 
 const router = Router();
 
-router.use(verifyJwt, requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.VIEWER), scopeToOutlet, scopeToBrand);
+router.use(verifyJwt, requireRole(RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.VIEWER), scopeToOutlet, scopeToBrand);
 
 // Must come before '/:id' — Express matches route registration order, and '/:id' would
 // otherwise swallow '/by-item' as an id lookup.

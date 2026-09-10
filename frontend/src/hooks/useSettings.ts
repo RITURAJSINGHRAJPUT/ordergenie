@@ -70,6 +70,8 @@ export function useCreateUser() {
       outletId?: string;
       /** null = all brands. Ignored when outletId is set — the server derives it from the outlet. */
       brand?: string | null;
+      /** Pages granted on top of the role, e.g. ['sales-forecast']. */
+      pageGrants?: string[];
     }) =>
       apiClient.post('/settings/users', input),
     onSuccess: () => {
@@ -93,6 +95,7 @@ export function useUpdateUser() {
       roleId?: string;
       outletId?: string | null;
       brand?: string | null;
+      pageGrants?: string[];
       isActive?: boolean;
       password?: string;
     }) => apiClient.put(`/settings/users/${id}`, input),

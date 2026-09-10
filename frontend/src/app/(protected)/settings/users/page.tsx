@@ -18,7 +18,7 @@ import { useOutlets } from '@/hooks/useOutlets';
 import { usePagedList } from '@/hooks/usePagedList';
 import { useAuthStore } from '@/store/authStore';
 import { formatDate } from '@/lib/format';
-import type { UserRow } from '@/types/api';
+import { SALES_FORECAST_GRANT, type UserRow } from '@/types/api';
 
 // Radix Select can't use '' as an item value, so the "All" choices carry sentinels that are
 // translated back to null (unrestricted) on submit.
@@ -130,12 +130,16 @@ function CreateUserDialog({
   outlets: { id: string; name: string; brand: string }[];
 }) {
   const createUser = useCreateUser();
+  // Only a super admin may grant pages — the users API is SUPER_ADMIN-only anyway, this
+  // just keeps the control out of sight for anyone else who somehow reaches the dialog.
+  const isSuperAdmin = useAuthStore((s) => s.user)?.role === 'SUPER_ADMIN';
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [roleId, setRoleId] = useState('');
   const [brand, setBrand] = useState('');
   const [outletId, setOutletId] = useState<string>('');
+  const [salesForecast, setSalesForecast] = useState(false);
 
   function reset() {
     setEmail('');
@@ -144,6 +148,7 @@ function CreateUserDialog({
     setRoleId('');
     setBrand('');
     setOutletId('');
+    setSalesForecast(false);
   }
 
   const brandOptions = [...new Set(outlets.map((o) => o.brand))].sort();
@@ -225,6 +230,15 @@ function CreateUserDialog({
               </SelectContent>
             </Select>
           </div>
+          {isSuperAdmin && (
+            <div className="flex items-center justify-between rounded-md border px-3 py-2">
+              <div>
+                <Label>Sales Forecast access</Label>
+                <p className="text-xs text-muted-foreground">Opens that one Settings tab, nothing else.</p>
+              </div>
+              <Switch checked={salesForecast} onCheckedChange={setSalesForecast} />
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button
@@ -245,6 +259,7 @@ function CreateUserDialog({
                   roleId,
                   outletId: outletId && outletId !== ALL_OUTLETS ? outletId : undefined,
                   brand: allBrands || !brand ? null : brand,
+                  pageGrants: salesForecast ? [SALES_FORECAST_GRANT] : [],
                 },
                 {
                   onSuccess: () => {
@@ -275,6 +290,8 @@ function EditUserDialog({
   outlets: { id: string; name: string; brand: string }[];
 }) {
   const updateUser = useUpdateUser();
+  const isSuperAdmin = useAuthStore((s) => s.user)?.role === 'SUPER_ADMIN';
+  const [salesForecast, setSalesForecast] = useState(user?.pageGrants?.includes(SALES_FORECAST_GRANT) ?? false);
   const [roleId, setRoleId] = useState(user?.roleId ?? '');
   const [outletId, setOutletId] = useState(user?.outletId ?? '');
   const [brand, setBrand] = useState('');
@@ -367,6 +384,15 @@ function EditUserDialog({
               </SelectContent>
             </Select>
           </div>
+          {isSuperAdmin && (
+            <div className="flex items-center justify-between rounded-md border px-3 py-2">
+              <div>
+                <Label>Sales Forecast access</Label>
+                <p className="text-xs text-muted-foreground">Opens that one Settings tab, nothing else.</p>
+              </div>
+              <Switch checked={salesForecast} onCheckedChange={setSalesForecast} />
+            </div>
+          )}
           <div className="space-y-1">
             <Label>Reset Password</Label>
             <Input type="password" placeholder="Leave blank to keep current" value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -387,6 +413,7 @@ function EditUserDialog({
                   roleId: effectiveRoleId,
                   outletId: effectiveOutletId && effectiveOutletId !== ALL_OUTLETS ? effectiveOutletId : null,
                   brand: allBrands || !effectiveBrand ? null : effectiveBrand,
+                  pageGrants: salesForecast ? [SALES_FORECAST_GRANT] : [],
                   ...(password ? { password } : {}),
                 },
                 { onSuccess: onClose }

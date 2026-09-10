@@ -26,9 +26,15 @@ export function useVisibleNav(): { items: NavItem[]; isReady: boolean } {
 
   // Unrestricted roles don't wait on the query at all — their nav never flickers.
   if (!isOutletScoped) {
-    return { items: visibleNavItems({ role, allowedBrands: null }), isReady: role !== undefined };
+    return {
+      items: visibleNavItems({ role, allowedBrands: null, pageGrants: user?.pageGrants }),
+      isReady: role !== undefined,
+    };
   }
 
   const allowedBrands = outlets ? Array.from(new Set(outlets.map((o) => o.brand))) : [];
-  return { items: visibleNavItems({ role, allowedBrands }), isReady: Boolean(outlets) };
+  return {
+    items: visibleNavItems({ role, allowedBrands, pageGrants: user?.pageGrants }),
+    isReady: Boolean(outlets),
+  };
 }

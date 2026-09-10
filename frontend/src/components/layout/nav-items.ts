@@ -104,9 +104,21 @@ function filterForHeadChef(items: NavItem[]): NavItem[] {
  * outlet). Outlet-scoped roles pass the brands of the outlets the API returns for
  * them, which hides the other brand's section entirely.
  */
-export function visibleNavItems({ role, allowedBrands }: { role?: Role; allowedBrands: string[] | null }): NavItem[] {
-  const isAdmin = role === 'ADMIN';
+export function visibleNavItems({
+  role,
+  allowedBrands,
+  pageGrants = [],
+}: {
+  role?: Role;
+  allowedBrands: string[] | null;
+  pageGrants?: string[];
+}): NavItem[] {
+  // adminOnly means "admin tier" — SUPER_ADMIN inherits everything ADMIN can see.
+  const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
   const isViewer = role === 'VIEWER';
+  // Settings itself is SUPER_ADMIN-only now, except VIEWER's long-standing read-only tabs and
+  // anyone holding a page grant, who needs the entry point to reach their one tab.
+  const canOpenSettings = role === 'SUPER_ADMIN' || isViewer || pageGrants.length > 0;
   const base = role === 'HEAD_CHEF' ? filterForHeadChef(NAV_ITEMS) : NAV_ITEMS;
 
   return base
@@ -114,7 +126,7 @@ export function visibleNavItems({ role, allowedBrands }: { role?: Role; allowedB
     // "Sales API" (brand-workspace children, adminOnly) stays admin-only — VIEWER only
     // gains visibility into "Settings" itself, which then further restricts its own
     // tabs (see settings/layout.tsx) down to Petpooja API + API Explorer.
-    .filter((item) => !item.adminOnly || isAdmin || (isViewer && item.label === 'Settings'))
+    .filter((item) => (item.label === 'Settings' ? canOpenSettings : !item.adminOnly || isAdmin))
     .map((item) =>
       item.children ? { ...item, children: item.children.filter((child) => !child.adminOnly || isAdmin) } : item
     );

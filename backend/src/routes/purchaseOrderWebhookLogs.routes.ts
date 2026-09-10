@@ -9,7 +9,7 @@ import {
 
 const router = Router();
 
-router.use(verifyJwt, requireRole(RoleName.ADMIN, RoleName.VIEWER));
+router.use(verifyJwt, requireRole(RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.VIEWER));
 
 router.get('/:id', getPurchaseOrderWebhookLogHandler);
 router.get('/', listPurchaseOrderWebhookLogsHandler);

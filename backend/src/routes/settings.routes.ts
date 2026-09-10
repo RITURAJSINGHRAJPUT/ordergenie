@@ -36,21 +36,23 @@ function blockViewer(req: Request, _res: Response, next: NextFunction) {
 router.get('/notifications', blockViewer, getNotificationSettingsHandler);
 router.put('/notifications', blockViewer, updateNotificationSettingsHandler);
 
-// Admin-only
-const adminOnly = requireRole(RoleName.ADMIN);
+// Settings is SUPER_ADMIN territory: ADMIN was deliberately dropped here, so managing
+// users/roles/config/sync is the one thing an admin can't do.
+const superAdminOnly = requireRole(RoleName.SUPER_ADMIN);
 
-router.get('/api-config', requireRole(RoleName.ADMIN, RoleName.VIEWER), listApiConfigsHandler);
-router.put('/api-config/:apiType', adminOnly, updateApiConfigHandler);
+// VIEWER keeps its existing read-only Petpooja API tab.
+router.get('/api-config', requireRole(RoleName.SUPER_ADMIN, RoleName.VIEWER), listApiConfigsHandler);
+router.put('/api-config/:apiType', superAdminOnly, updateApiConfigHandler);
 
-router.get('/sync-schedule', adminOnly, listSyncSchedulesHandler);
-router.put('/sync-schedule/:syncType', adminOnly, updateSyncScheduleHandler);
+router.get('/sync-schedule', superAdminOnly, listSyncSchedulesHandler);
+router.put('/sync-schedule/:syncType', superAdminOnly, updateSyncScheduleHandler);
 
-router.get('/users', adminOnly, listUsersHandler);
-router.post('/users', adminOnly, createUserHandler);
-router.put('/users/:id', adminOnly, updateUserHandler);
-router.delete('/users/:id', adminOnly, deleteUserHandler);
+router.get('/users', superAdminOnly, listUsersHandler);
+router.post('/users', superAdminOnly, createUserHandler);
+router.put('/users/:id', superAdminOnly, updateUserHandler);
+router.delete('/users/:id', superAdminOnly, deleteUserHandler);
 
-router.get('/roles', adminOnly, listRolesHandler);
-router.put('/roles/:id', adminOnly, updateRoleHandler);
+router.get('/roles', superAdminOnly, listRolesHandler);
+router.put('/roles/:id', superAdminOnly, updateRoleHandler);
 
 export default router;

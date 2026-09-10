@@ -35,24 +35,23 @@ const KNOWN_OUTLETS = [
 ] as const;
 
 async function seedRolesAndAdmin() {
+  // A lookup rather than a ternary chain — it was already five deep before SUPER_ADMIN.
+  const ROLE_DESCRIPTIONS: Record<RoleName, string> = {
+    SUPER_ADMIN: 'Everything, including Settings — the only role that can manage users, roles and Petpooja config, and the only one that can grant page access',
+    ADMIN: 'Full access to outlets, sales, purchases and reports. No Settings unless granted a specific page',
+    MANAGEMENT: 'Dashboards, outlet comparison, report exports',
+    OUTLET_MANAGER: 'Single assigned outlet: sales, inventory, purchase orders',
+    HEAD_CHEF: 'Single assigned outlet: enter daily Opening/Actual Closing on Reconciliation only',
+    VIEWER:
+      'Read-only access across all outlets — no create/edit/delete, and no visibility into Users, Roles, Notifications, or Sync Schedule',
+  };
+
   const roleRecords = await Promise.all(
     (Object.values(RoleName) as RoleName[]).map((name) =>
       prisma.role.upsert({
         where: { name },
         update: {},
-        create: {
-          name,
-          description:
-            name === 'ADMIN'
-              ? 'Full access: users, outlets, Petpooja config, all reports'
-              : name === 'MANAGEMENT'
-                ? 'Dashboards, outlet comparison, report exports'
-                : name === 'OUTLET_MANAGER'
-                  ? 'Single assigned outlet: sales, inventory, purchase orders'
-                  : name === 'HEAD_CHEF'
-                    ? 'Single assigned outlet: enter daily Opening/Actual Closing on Reconciliation only'
-                    : 'Read-only access across all outlets — no create/edit/delete, and no visibility into Users, Roles, Notifications, or Sync Schedule',
-        },
+        create: { name, description: ROLE_DESCRIPTIONS[name] },
       })
     )
   );

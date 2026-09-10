@@ -123,6 +123,7 @@ export interface CreateUserInput {
   roleId: string;
   outletId?: string;
   brand?: string | null;
+  pageGrants?: string[];
 }
 
 export async function createUser(input: CreateUserInput) {
@@ -140,6 +141,7 @@ export async function createUser(input: CreateUserInput) {
       roleId: input.roleId,
       outletId: input.outletId,
       brand,
+      pageGrants: input.pageGrants ?? [],
     },
   });
 }
@@ -150,6 +152,7 @@ export interface UpdateUserInput {
   roleId?: string;
   outletId?: string | null;
   brand?: string | null;
+  pageGrants?: string[];
   isActive?: boolean;
   password?: string;
 }
@@ -164,6 +167,7 @@ export async function updateUser(id: string, input: UpdateUserInput) {
   }
   if (input.roleId !== undefined) data.roleId = input.roleId;
   if (input.outletId !== undefined) data.outletId = input.outletId;
+  if (input.pageGrants !== undefined) data.pageGrants = input.pageGrants;
   if (input.isActive !== undefined) data.isActive = input.isActive;
   if (input.password) data.passwordHash = await bcrypt.hash(input.password, 10);
 

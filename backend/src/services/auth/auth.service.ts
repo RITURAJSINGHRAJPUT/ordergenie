@@ -14,6 +14,7 @@ export interface LoginResult {
     role: string;
     outletId: string | null;
     brand: string | null;
+    pageGrants: string[];
   };
 }
 
@@ -34,6 +35,7 @@ export async function login(email: string, password: string, rememberMe: boolean
     role: user.role.name,
     outletId: user.outletId,
     brand: user.brand,
+    pageGrants: user.pageGrants,
   };
 
   const expiresIn = rememberMe ? env.JWT_REMEMBER_EXPIRES_IN : env.JWT_EXPIRES_IN;
@@ -50,6 +52,7 @@ export async function login(email: string, password: string, rememberMe: boolean
       role: user.role.name,
       outletId: user.outletId,
       brand: user.brand,
+      pageGrants: user.pageGrants,
     },
   };
 }

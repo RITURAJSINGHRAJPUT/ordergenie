@@ -10,7 +10,7 @@ router.use(verifyJwt, scopeToOutlet, scopeToBrand);
 
 // Every authenticated role can view (open router-level, no requireRole) except entries can
 // only be written by everyone but VIEWER — this is the one write-only gate for this router.
-const canWrite = requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.HEAD_CHEF);
+const canWrite = requireRole(RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.HEAD_CHEF);
 
 router.get('/', listSoldOutHandler);
 router.post('/entries', canWrite, upsertSoldOutEntryHandler);

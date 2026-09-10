@@ -30,5 +30,6 @@ export const meHandler = asyncHandler(async (req: Request, res: Response) => {
     outletId: user!.outletId,
     outletName: user!.outlet?.name ?? null,
     brand: user!.brand,
+    pageGrants: user!.pageGrants,
   });
 });

@@ -8,12 +8,12 @@ const router = Router();
 
 // HEAD_CHEF reports wastage from the kitchen but can't remove records after the fact,
 // so create and delete are separate gates rather than one shared write gate.
-const canCreate = requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.HEAD_CHEF);
-const canDelete = requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER);
+const canCreate = requireRole(RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.HEAD_CHEF);
+const canDelete = requireRole(RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER);
 
 router.use(
   verifyJwt,
-  requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.HEAD_CHEF, RoleName.VIEWER),
+  requireRole(RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.HEAD_CHEF, RoleName.VIEWER),
   scopeToOutlet, scopeToBrand
 );
 

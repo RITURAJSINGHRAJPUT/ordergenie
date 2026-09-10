@@ -8,8 +8,8 @@ const router = Router();
 
 router.use(verifyJwt);
 
-router.get('/overview', requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.VIEWER), getOutletsOverviewHandler);
-router.get('/comparison', requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.VIEWER), getOutletComparisonHandler);
+router.get('/overview', requireRole(RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.VIEWER), getOutletsOverviewHandler);
+router.get('/comparison', requireRole(RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.VIEWER), getOutletComparisonHandler);
 router.get('/', scopeToOutlet, scopeToBrand, listOutletsHandler);
 
 export default router;

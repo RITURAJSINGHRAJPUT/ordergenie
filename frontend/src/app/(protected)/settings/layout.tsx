@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
-import type { Role } from '@/types/api';
+import { SALES_FORECAST_GRANT, type Role } from '@/types/api';
 
 const TABS = [
   { href: '/settings/api', label: 'Petpooja API' },
@@ -20,10 +20,18 @@ const TABS = [
 // VIEWER gets read-only Petpooja API + API Explorer, but no Users/Roles/Notifications/
 // Sync Schedule; every other non-admin role keeps the existing Notifications-only access.
 const VIEWER_TABS = new Set(['/settings/api', '/settings/api-explorer']);
+const SALES_FORECAST_TAB = '/settings/predictions-import';
 
-export function allowedSettingsTabsFor(role: Role | undefined): string[] {
-  if (role === 'ADMIN') return TABS.map((t) => t.href);
-  if (role === 'VIEWER') return TABS.filter((t) => VIEWER_TABS.has(t.href)).map((t) => t.href);
+/**
+ * Settings is SUPER_ADMIN-only. A plain ADMIN gets nothing here unless they hold a page
+ * grant, in which case they get exactly that one tab — the grant opens a page, not the section.
+ */
+export function allowedSettingsTabsFor(user: { role?: Role; pageGrants?: string[] } | undefined): string[] {
+  if (!user?.role) return [];
+  if (user.role === 'SUPER_ADMIN') return TABS.map((t) => t.href);
+  if (user.pageGrants?.includes(SALES_FORECAST_GRANT)) return [SALES_FORECAST_TAB];
+  if (user.role === 'VIEWER') return TABS.filter((t) => VIEWER_TABS.has(t.href)).map((t) => t.href);
+  if (user.role === 'ADMIN') return [];
   return ['/settings/notifications'];
 }
 
@@ -34,13 +42,14 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
 
   useEffect(() => {
     if (!user) return;
-    const allowed = allowedSettingsTabsFor(user.role);
+    const allowed = allowedSettingsTabsFor(user);
     if (!allowed.includes(pathname)) {
-      router.replace(allowed[0]);
+      // An ADMIN with no grant has no reachable tab at all, so there's nothing to fall back to.
+      router.replace(allowed[0] ?? '/dashboard');
     }
   }, [user, pathname, router]);
 
-  const allowedTabs = allowedSettingsTabsFor(user?.role);
+  const allowedTabs = allowedSettingsTabsFor(user ?? undefined);
 
   return (
     <div className="space-y-4">

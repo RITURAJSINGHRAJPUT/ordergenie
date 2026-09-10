@@ -43,3 +43,22 @@ export function scopeToBrand(req: Request, _res: Response, next: NextFunction) {
   }
   next();
 }
+
+/** The one page that can be granted per-user today. */
+export const SALES_FORECAST_GRANT = 'sales-forecast';
+
+/**
+ * Lets SUPER_ADMIN through, plus anyone explicitly granted the page. This is what makes a
+ * granted page actually load — a nav-only grant would show the menu item and then 403.
+ */
+export function requirePageGrant(grant: string, ...alsoAllow: RoleName[]) {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    if (!req.user) throw new AppError('Not authenticated', 401);
+    const allowed =
+      req.user.role === RoleName.SUPER_ADMIN ||
+      alsoAllow.includes(req.user.role) ||
+      (req.user.pageGrants ?? []).includes(grant);
+    if (!allowed) throw new AppError('You do not have permission to perform this action', 403);
+    next();
+  };
+}

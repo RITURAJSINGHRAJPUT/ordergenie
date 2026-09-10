@@ -6,7 +6,7 @@ import { triggerManualSyncHandler, listSyncLogsHandler } from '../controllers/sy
 
 const router = Router();
 
-router.use(verifyJwt, requireRole(RoleName.ADMIN, RoleName.MANAGEMENT));
+router.use(verifyJwt, requireRole(RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.MANAGEMENT));
 
 router.post('/manual', triggerManualSyncHandler);
 router.get('/logs', listSyncLogsHandler);

@@ -10,7 +10,8 @@ export default function SettingsIndexPage() {
   const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
-    router.replace(allowedSettingsTabsFor(user?.role)[0]);
+    // No reachable tab (a plain ADMIN) means Settings isn't theirs to open at all.
+    router.replace(allowedSettingsTabsFor(user ?? undefined)[0] ?? '/dashboard');
   }, [user, router]);
 
   return null;

@@ -6,7 +6,7 @@ import { explorerFetchHandler } from '../controllers/petpoojaExplorer.controller
 
 const router = Router();
 
-router.use(verifyJwt, requireRole(RoleName.ADMIN, RoleName.VIEWER));
+router.use(verifyJwt, requireRole(RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.VIEWER));
 
 router.post('/fetch', explorerFetchHandler);
 

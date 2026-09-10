@@ -1,4 +1,7 @@
-export type Role = 'ADMIN' | 'MANAGEMENT' | 'OUTLET_MANAGER' | 'HEAD_CHEF' | 'VIEWER';
+export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MANAGEMENT' | 'OUTLET_MANAGER' | 'HEAD_CHEF' | 'VIEWER';
+
+/** The only page that can be granted per-user today (see requirePageGrant on the backend). */
+export const SALES_FORECAST_GRANT = 'sales-forecast';
 
 export interface AuthUser {
   id: string;
@@ -9,6 +12,8 @@ export interface AuthUser {
   outletName?: string | null;
   /** null = every brand. Coarser scope than outletId. */
   brand?: string | null;
+  /** Pages granted on top of the role's defaults. */
+  pageGrants?: string[];
 }
 
 export interface LoginResponse {
@@ -322,6 +327,7 @@ export interface UserRow {
   outletId: string | null;
   outletName: string | null;
   brand: string | null;
+  pageGrants: string[];
   isActive: boolean;
   lastLoginAt: string | null;
 }

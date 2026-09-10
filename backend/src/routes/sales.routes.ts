@@ -12,7 +12,7 @@ import {
 
 const router = Router();
 
-router.use(verifyJwt, requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.VIEWER), scopeToOutlet, scopeToBrand);
+router.use(verifyJwt, requireRole(RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.VIEWER), scopeToOutlet, scopeToBrand);
 
 // NOTE: /items routes must be registered before /:id so "items" isn't captured as an id param,
 // and /items/categories before /items/:itemName for the same reason.
