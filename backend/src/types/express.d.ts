@@ -5,6 +5,8 @@ export interface AuthUser {
   email: string;
   role: RoleName;
   outletId: string | null;
+  /** null = every brand. Tokens issued before brand scoping decode as undefined, i.e. unrestricted. */
+  brand?: string | null;
 }
 
 declare global {

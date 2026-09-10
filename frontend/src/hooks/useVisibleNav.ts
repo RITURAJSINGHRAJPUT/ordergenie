@@ -17,8 +17,11 @@ const OUTLET_SCOPED_ROLES = new Set(['HEAD_CHEF', 'OUTLET_MANAGER']);
  * on redirecting rather than bouncing a page they'd have allowed a moment later.
  */
 export function useVisibleNav(): { items: NavItem[]; isReady: boolean } {
-  const role = useAuthStore((s) => s.user)?.role;
-  const isOutletScoped = role !== undefined && OUTLET_SCOPED_ROLES.has(role);
+  const user = useAuthStore((s) => s.user);
+  const role = user?.role;
+  // A brand-scoped user has no outlet, so the role test alone would hand them the full nav.
+  // Either kind of restriction means the brands must be derived from the outlets they can see.
+  const isOutletScoped = (role !== undefined && OUTLET_SCOPED_ROLES.has(role)) || Boolean(user?.brand);
   const { data: outlets } = useOutlets();
 
   // Unrestricted roles don't wait on the query at all — their nav never flickers.

@@ -62,7 +62,15 @@ export function useUsers() {
 export function useCreateUser() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { email: string; password: string; name: string; roleId: string; outletId?: string }) =>
+    mutationFn: async (input: {
+      email: string;
+      password: string;
+      name: string;
+      roleId: string;
+      outletId?: string;
+      /** null = all brands. Ignored when outletId is set — the server derives it from the outlet. */
+      brand?: string | null;
+    }) =>
       apiClient.post('/settings/users', input),
     onSuccess: () => {
       toast.success('User created');
@@ -84,6 +92,7 @@ export function useUpdateUser() {
       email?: string;
       roleId?: string;
       outletId?: string | null;
+      brand?: string | null;
       isActive?: boolean;
       password?: string;
     }) => apiClient.put(`/settings/users/${id}`, input),

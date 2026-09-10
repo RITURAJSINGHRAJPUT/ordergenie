@@ -28,3 +28,18 @@ export function scopeToOutlet(req: Request, _res: Response, next: NextFunction) 
   }
   next();
 }
+
+/**
+ * Forces the brand filter to the caller's assigned brand, overwriting whatever the client
+ * sent — the brand twin of scopeToOutlet. Users with no brand (the default) are unrestricted.
+ *
+ * Brand scope is coarser than outlet scope and they compose: a user with an outlet is already
+ * pinned to one outlet, so this only bites for brand-scoped users whose outletId is null.
+ */
+export function scopeToBrand(req: Request, _res: Response, next: NextFunction) {
+  if (!req.user) throw new AppError('Not authenticated', 401);
+  if (req.user.brand) {
+    req.query.brand = req.user.brand;
+  }
+  next();
+}

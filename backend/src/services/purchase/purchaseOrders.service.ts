@@ -136,13 +136,15 @@ export async function listPurchaseOrderItemsByDay(query: PurchaseOrderQuery): Pr
     }));
 }
 
-export async function getPurchaseOrderById(id: string, restrictToOutletId?: string) {
+export async function getPurchaseOrderById(id: string, restrictToOutletId?: string, restrictToBrand?: string) {
   const po = await prisma.purchaseOrder.findUnique({
     where: { id },
-    include: { outlet: { select: { name: true } }, vendor: true, items: true },
+    include: { outlet: { select: { name: true, brand: true } }, vendor: true, items: true },
   });
   if (!po) throw new AppError('Purchase order not found', 404);
   if (restrictToOutletId && po.outletId !== restrictToOutletId) throw new AppError('Purchase order not found', 404);
+  // Query filtering never reaches an :id route, so a brand-scoped caller is checked here.
+  if (restrictToBrand && po.outlet.brand !== restrictToBrand) throw new AppError('Purchase order not found', 404);
 
   return {
     id: po.id,

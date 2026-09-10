@@ -56,6 +56,7 @@ export const listUsersHandler = asyncHandler(async (_req: Request, res: Response
       roleId: u.roleId,
       outletId: u.outletId,
       outletName: u.outlet?.name ?? null,
+      brand: u.brand,
       isActive: u.isActive,
       lastLoginAt: u.lastLoginAt,
     }))
@@ -68,6 +69,7 @@ const createUserSchema = z.object({
   name: z.string().min(1),
   roleId: z.string(),
   outletId: z.string().optional(),
+  brand: z.string().nullable().optional(),
 });
 
 export const createUserHandler = asyncHandler(async (req: Request, res: Response) => {
@@ -81,6 +83,7 @@ const updateUserSchema = z.object({
   email: z.string().email().optional(),
   roleId: z.string().optional(),
   outletId: z.string().nullable().optional(),
+  brand: z.string().nullable().optional(),
   isActive: z.boolean().optional(),
   password: z.string().min(6).optional(),
 });

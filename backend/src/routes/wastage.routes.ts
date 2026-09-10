@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { RoleName } from '@prisma/client';
 import { verifyJwt } from '../middleware/auth.middleware';
-import { requireRole, scopeToOutlet } from '../middleware/rbac.middleware';
+import { requireRole, scopeToBrand, scopeToOutlet } from '../middleware/rbac.middleware';
 import { listWastageHandler, createWastageHandler, deleteWastageHandler } from '../controllers/wastage.controller';
 
 const router = Router();
@@ -14,7 +14,7 @@ const canDelete = requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTL
 router.use(
   verifyJwt,
   requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.HEAD_CHEF, RoleName.VIEWER),
-  scopeToOutlet
+  scopeToOutlet, scopeToBrand
 );
 
 router.get('/', listWastageHandler);

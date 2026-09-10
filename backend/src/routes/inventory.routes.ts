@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { RoleName } from '@prisma/client';
 import { verifyJwt } from '../middleware/auth.middleware';
-import { requireRole, scopeToOutlet } from '../middleware/rbac.middleware';
+import { requireRole, scopeToBrand, scopeToOutlet } from '../middleware/rbac.middleware';
 import {
   listInventoryHandler,
   getInventoryHandler,
@@ -11,7 +11,7 @@ import {
 
 const router = Router();
 
-router.use(verifyJwt, requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.VIEWER), scopeToOutlet);
+router.use(verifyJwt, requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.VIEWER), scopeToOutlet, scopeToBrand);
 
 router.get('/stores', listInventoryStoresHandler);
 router.get('/categories', listInventoryCategoriesHandler);

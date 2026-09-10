@@ -29,5 +29,6 @@ export const meHandler = asyncHandler(async (req: Request, res: Response) => {
     role: user!.role.name,
     outletId: user!.outletId,
     outletName: user!.outlet?.name ?? null,
+    brand: user!.brand,
   });
 });

@@ -36,6 +36,8 @@ export interface SoldOutRowData {
 
 export interface SoldOutQuery {
   outletId?: string;
+  /** Forced by scopeToBrand for brand-scoped users; ANDs with outletId so a mismatch returns nothing. */
+  brand?: string;
   date?: string;
   page?: string;
   pageSize?: string;
@@ -58,10 +60,18 @@ export async function getSoldOutDashboard(query: SoldOutQuery) {
   const [soldRows, entryRows] = await Promise.all([
     prisma.saleItem.groupBy({
       by: ['itemName'],
-      where: { sale: { outletId, orderDate: { gte: day, lt: nextDay } } },
+      where: {
+        sale: {
+          outletId,
+          orderDate: { gte: day, lt: nextDay },
+          ...(query.brand ? { outlet: { brand: query.brand } } : {}),
+        },
+      },
       _sum: { quantity: true },
     }),
-    prisma.soldOutEntry.findMany({ where: { outletId, stockDate: day } }),
+    prisma.soldOutEntry.findMany({
+      where: { outletId, stockDate: day, ...(query.brand ? { outlet: { brand: query.brand } } : {}) },
+    }),
   ]);
 
   const soldByItem = new Map<string, number>();

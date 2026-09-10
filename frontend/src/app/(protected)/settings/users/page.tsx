@@ -20,6 +20,11 @@ import { useAuthStore } from '@/store/authStore';
 import { formatDate } from '@/lib/format';
 import type { UserRow } from '@/types/api';
 
+// Radix Select can't use '' as an item value, so the "All" choices carry sentinels that are
+// translated back to null (unrestricted) on submit.
+const ALL_BRANDS = '__all_brands__';
+const ALL_OUTLETS = '__all_outlets__';
+
 export default function UsersPage() {
   const { data: users, isLoading, isError } = useUsers();
   const { data: roles } = useRoles();
@@ -57,6 +62,7 @@ export default function UsersPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>Brand</TableHead>
                     <TableHead>Outlet</TableHead>
                     <TableHead>Last Login</TableHead>
                     <TableHead>Active</TableHead>
@@ -71,7 +77,8 @@ export default function UsersPage() {
                       <TableCell>
                         <Badge variant="outline">{u.role}</Badge>
                       </TableCell>
-                      <TableCell>{u.outletName ?? 'All'}</TableCell>
+                      <TableCell>{u.brand ?? 'All brands'}</TableCell>
+                      <TableCell>{u.outletName ?? 'All outlets'}</TableCell>
                       <TableCell>{u.lastLoginAt ? formatDate(u.lastLoginAt) : 'Never'}</TableCell>
                       <TableCell>
                         <Switch
@@ -140,8 +147,10 @@ function CreateUserDialog({
   }
 
   const brandOptions = [...new Set(outlets.map((o) => o.brand))].sort();
-  const filteredOutlets = outlets.filter((o) => o.brand === brand);
+  const allBrands = brand === ALL_BRANDS;
+  const filteredOutlets = allBrands ? outlets : outlets.filter((o) => o.brand === brand);
   const roleName = roles.find((r) => r.id === roleId)?.name;
+  // These roles are scoped by a single outlet (scopeToOutlet), so "All" is not offered.
   const requiresOutlet = roleName === 'HEAD_CHEF' || roleName === 'OUTLET_MANAGER';
 
   return (
@@ -191,6 +200,7 @@ function CreateUserDialog({
                 <SelectValue placeholder="Select brand" />
               </SelectTrigger>
               <SelectContent>
+                {!requiresOutlet && <SelectItem value={ALL_BRANDS}>All brands</SelectItem>}
                 {brandOptions.map((b) => (
                   <SelectItem key={b} value={b}>
                     {b}
@@ -206,6 +216,7 @@ function CreateUserDialog({
                 <SelectValue placeholder={brand ? 'Select outlet' : 'Pick a brand first'} />
               </SelectTrigger>
               <SelectContent>
+                {!requiresOutlet && <SelectItem value={ALL_OUTLETS}>All outlets</SelectItem>}
                 {filteredOutlets.map((o) => (
                   <SelectItem key={o.id} value={o.id}>
                     {o.name}
@@ -227,7 +238,14 @@ function CreateUserDialog({
             }
             onClick={() =>
               createUser.mutate(
-                { email, name, password, roleId, outletId: outletId || undefined },
+                {
+                  email,
+                  name,
+                  password,
+                  roleId,
+                  outletId: outletId && outletId !== ALL_OUTLETS ? outletId : undefined,
+                  brand: allBrands || !brand ? null : brand,
+                },
                 {
                   onSuccess: () => {
                     onClose();
@@ -264,13 +282,17 @@ function EditUserDialog({
   const [password, setPassword] = useState('');
 
   const effectiveRoleId = roleId || user?.roleId || '';
-  const effectiveOutletId = outletId || user?.outletId || '';
+  // A user with no outlet is unrestricted at outlet level, so the picker shows "All outlets".
+  const effectiveOutletId = outletId || user?.outletId || (user ? ALL_OUTLETS : '');
   const currentOutletBrand = outlets.find((o) => o.id === (user?.outletId ?? ''))?.brand ?? '';
-  const effectiveBrand = brand || currentOutletBrand;
+  const storedBrand = user?.brand ?? (user && !user.outletId ? ALL_BRANDS : '');
+  const effectiveBrand = brand || currentOutletBrand || storedBrand;
+  const allBrands = effectiveBrand === ALL_BRANDS;
 
   const brandOptions = [...new Set(outlets.map((o) => o.brand))].sort();
-  const filteredOutlets = outlets.filter((o) => o.brand === effectiveBrand);
+  const filteredOutlets = allBrands ? outlets : outlets.filter((o) => o.brand === effectiveBrand);
   const roleName = roles.find((r) => r.id === effectiveRoleId)?.name;
+  // These roles are scoped by a single outlet (scopeToOutlet), so "All" is not offered.
   const requiresOutlet = roleName === 'HEAD_CHEF' || roleName === 'OUTLET_MANAGER';
 
   return (
@@ -320,6 +342,7 @@ function EditUserDialog({
                 <SelectValue placeholder="Select brand" />
               </SelectTrigger>
               <SelectContent>
+                {!requiresOutlet && <SelectItem value={ALL_BRANDS}>All brands</SelectItem>}
                 {brandOptions.map((b) => (
                   <SelectItem key={b} value={b}>
                     {b}
@@ -335,6 +358,7 @@ function EditUserDialog({
                 <SelectValue placeholder={effectiveBrand ? 'Select outlet' : 'Pick a brand first'} />
               </SelectTrigger>
               <SelectContent>
+                {!requiresOutlet && <SelectItem value={ALL_OUTLETS}>All outlets</SelectItem>}
                 {filteredOutlets.map((o) => (
                   <SelectItem key={o.id} value={o.id}>
                     {o.name}
@@ -350,7 +374,10 @@ function EditUserDialog({
         </div>
         <DialogFooter>
           <Button
-            disabled={updateUser.isPending || (requiresOutlet && (!effectiveBrand || !effectiveOutletId))}
+            disabled={
+              updateUser.isPending ||
+              (requiresOutlet && (!effectiveBrand || allBrands || !effectiveOutletId || effectiveOutletId === ALL_OUTLETS))
+            }
             onClick={() => {
               if (!user) return;
               updateUser.mutate(
@@ -358,7 +385,8 @@ function EditUserDialog({
                   id: user.id,
                   email: email || user.email,
                   roleId: effectiveRoleId,
-                  outletId: effectiveOutletId || null,
+                  outletId: effectiveOutletId && effectiveOutletId !== ALL_OUTLETS ? effectiveOutletId : null,
+                  brand: allBrands || !effectiveBrand ? null : effectiveBrand,
                   ...(password ? { password } : {}),
                 },
                 { onSuccess: onClose }

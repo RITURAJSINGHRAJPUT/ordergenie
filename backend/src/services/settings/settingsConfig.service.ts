@@ -83,7 +83,11 @@ export async function listUsers() {
 // when outletId is null, and outletRestrictionFor (authz.ts) would otherwise leave
 // detail lookups silently unscoped. Neither the create nor update payload previously
 // enforced this, which is how a broken no-outlet HEAD_CHEF account reached production.
-async function assertOutletRequirementSatisfied(roleId: string, outletId: string | null | undefined) {
+async function assertOutletRequirementSatisfied(
+  roleId: string,
+  outletId: string | null | undefined,
+  brand: string | null | undefined
+): Promise<string | null> {
   const role = await prisma.role.findUnique({ where: { id: roleId } });
   if (!role) throw new AppError('Role not found', 404);
 
@@ -97,7 +101,19 @@ async function assertOutletRequirementSatisfied(roleId: string, outletId: string
     if (!outlet || !outlet.isActive) {
       throw new AppError('Outlet not found or inactive', 400);
     }
+    // Derived, never trusted from the payload: a stored brand that disagreed with the
+    // assigned outlet would make the two scopes contradict each other.
+    return outlet.brand;
   }
+
+  if (brand) {
+    const exists = await prisma.outlet.findFirst({ where: { brand }, select: { id: true } });
+    if (!exists) throw new AppError('Unknown brand', 400);
+    return brand;
+  }
+
+  // No outlet and no brand — unrestricted, i.e. "All brands / All outlets".
+  return null;
 }
 
 export interface CreateUserInput {
@@ -106,13 +122,14 @@ export interface CreateUserInput {
   name: string;
   roleId: string;
   outletId?: string;
+  brand?: string | null;
 }
 
 export async function createUser(input: CreateUserInput) {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) throw new AppError('A user with this email already exists', 409);
 
-  await assertOutletRequirementSatisfied(input.roleId, input.outletId);
+  const brand = await assertOutletRequirementSatisfied(input.roleId, input.outletId, input.brand);
 
   const passwordHash = await bcrypt.hash(input.password, 10);
   return prisma.user.create({
@@ -122,6 +139,7 @@ export async function createUser(input: CreateUserInput) {
       name: input.name,
       roleId: input.roleId,
       outletId: input.outletId,
+      brand,
     },
   });
 }
@@ -131,6 +149,7 @@ export interface UpdateUserInput {
   email?: string;
   roleId?: string;
   outletId?: string | null;
+  brand?: string | null;
   isActive?: boolean;
   password?: string;
 }
@@ -151,12 +170,13 @@ export async function updateUser(id: string, input: UpdateUserInput) {
   // Only re-validate when role or outlet are actually changing — checks the
   // resulting (post-update) combination, not just whichever field was touched,
   // so e.g. switching role to HEAD_CHEF on a user with no outlet still gets caught.
-  if (input.roleId !== undefined || input.outletId !== undefined) {
+  if (input.roleId !== undefined || input.outletId !== undefined || input.brand !== undefined) {
     const current = await prisma.user.findUnique({ where: { id } });
     if (!current) throw new AppError('User not found', 404);
     const effectiveRoleId = input.roleId ?? current.roleId;
     const effectiveOutletId = input.outletId !== undefined ? input.outletId : current.outletId;
-    await assertOutletRequirementSatisfied(effectiveRoleId, effectiveOutletId);
+    const effectiveBrand = input.brand !== undefined ? input.brand : current.brand;
+    data.brand = await assertOutletRequirementSatisfied(effectiveRoleId, effectiveOutletId, effectiveBrand);
   }
 
   return prisma.user.update({ where: { id }, data });

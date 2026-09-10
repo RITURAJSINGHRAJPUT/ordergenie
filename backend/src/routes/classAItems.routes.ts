@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { RoleName } from '@prisma/client';
 import { verifyJwt } from '../middleware/auth.middleware';
-import { requireRole, scopeToOutlet } from '../middleware/rbac.middleware';
+import { requireRole, scopeToBrand, scopeToOutlet } from '../middleware/rbac.middleware';
 import {
   listClassAItemsHandler,
   addClassAItemHandler,
@@ -13,7 +13,7 @@ const router = Router();
 
 const canWrite = requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER);
 
-router.use(verifyJwt, requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.VIEWER), scopeToOutlet);
+router.use(verifyJwt, requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.VIEWER), scopeToOutlet, scopeToBrand);
 
 // /summary must be registered before /:id so "summary" isn't captured as an id param.
 router.get('/summary', getClassAItemsSummaryHandler);

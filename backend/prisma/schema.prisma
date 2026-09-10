@@ -118,6 +118,10 @@ model User {
   role         Role      @relation(fields: [roleId], references: [id])
   outletId     String?
   outlet       Outlet?   @relation(fields: [outletId], references: [id])
+  // Access scope, coarser than outletId: null means every brand. When outletId is set this
+  // is derived from that outlet, so the two can never disagree. Roles that require an
+  // outlet (HEAD_CHEF/OUTLET_MANAGER) stay scoped by outletId, not by this.
+  brand        String?
   isActive     Boolean   @default(true)
   lastLoginAt  DateTime?
   createdAt    DateTime  @default(now())

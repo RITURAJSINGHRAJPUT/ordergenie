@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { RoleName } from '@prisma/client';
 import { verifyJwt } from '../middleware/auth.middleware';
-import { requireRole, scopeToOutlet } from '../middleware/rbac.middleware';
+import { requireRole, scopeToBrand, scopeToOutlet } from '../middleware/rbac.middleware';
 import { listSoldOutHandler, upsertSoldOutEntryHandler } from '../controllers/soldOut.controller';
 
 const router = Router();
 
-router.use(verifyJwt, scopeToOutlet);
+router.use(verifyJwt, scopeToOutlet, scopeToBrand);
 
 // Every authenticated role can view (open router-level, no requireRole) except entries can
 // only be written by everyone but VIEWER — this is the one write-only gate for this router.

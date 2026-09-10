@@ -19,6 +19,8 @@ export interface PredictedSalesQuery {
   to?: string;
   page?: string;
   pageSize?: string;
+  /** Forced by scopeToBrand for brand-scoped users. */
+  brand?: string;
 }
 
 export async function listPredictedSales(query: PredictedSalesQuery) {
@@ -32,7 +34,12 @@ export async function listPredictedSales(query: PredictedSalesQuery) {
   const pagination = parsePagination(query as unknown as Record<string, unknown>);
   const { skip, take } = toSkipTake(pagination);
 
-  const where = { outletId, stockDate: { gte: from, lte: to } };
+  const where = {
+    outletId,
+    stockDate: { gte: from, lte: to },
+    // Forced by scopeToBrand — ANDs with outletId so another brand's outlet returns nothing.
+    ...(query.brand ? { outlet: { brand: query.brand } } : {}),
+  };
   const [rows, total] = await Promise.all([
     prisma.predictedSale.findMany({
       where,

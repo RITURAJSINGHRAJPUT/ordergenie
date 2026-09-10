@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { RoleName } from '@prisma/client';
 import { verifyJwt } from '../middleware/auth.middleware';
-import { requireRole, scopeToOutlet } from '../middleware/rbac.middleware';
+import { requireRole, scopeToBrand, scopeToOutlet } from '../middleware/rbac.middleware';
 import {
   listPurchaseOrdersHandler,
   listPurchaseOrderItemsByDayHandler,
@@ -11,7 +11,7 @@ import {
 
 const router = Router();
 
-router.use(verifyJwt, requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.VIEWER), scopeToOutlet);
+router.use(verifyJwt, requireRole(RoleName.ADMIN, RoleName.MANAGEMENT, RoleName.OUTLET_MANAGER, RoleName.VIEWER), scopeToOutlet, scopeToBrand);
 
 // Must come before '/:id' — Express matches route registration order, and '/:id' would
 // otherwise swallow '/by-item' as an id lookup.

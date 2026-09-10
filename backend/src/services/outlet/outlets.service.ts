@@ -5,10 +5,14 @@ function toNum(v: unknown): number {
   return v === null || v === undefined ? 0 : Number(v);
 }
 
-export async function listOutlets(options: { activeOnly?: boolean; outletId?: string } = {}) {
-  const { activeOnly = true, outletId } = options;
+export async function listOutlets(options: { activeOnly?: boolean; outletId?: string; brand?: string } = {}) {
+  const { activeOnly = true, outletId, brand } = options;
   return prisma.outlet.findMany({
-    where: { ...(activeOnly ? { isActive: true } : {}), ...(outletId ? { id: outletId } : {}) },
+    where: {
+      ...(activeOnly ? { isActive: true } : {}),
+      ...(outletId ? { id: outletId } : {}),
+      ...(brand ? { brand } : {}),
+    },
     orderBy: [{ brand: 'asc' }, { name: 'asc' }],
   });
 }

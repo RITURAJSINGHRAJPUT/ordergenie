@@ -6,7 +6,10 @@ import { listOutlets, getOutletsOverview, getOutletComparison } from '../service
 export const listOutletsHandler = asyncHandler(async (req: Request, res: Response) => {
   // scopeToOutlet (mounted on this router) forces outletId for OUTLET_MANAGER.
   const outletId = typeof req.query.outletId === 'string' ? req.query.outletId : undefined;
-  const outlets = await listOutlets({ outletId });
+  // scopeToBrand forces req.query.brand for brand-scoped users, which is what restricts the
+  // sidebar too — useVisibleNav derives the visible brands from this endpoint's response.
+  const brand = typeof req.query.brand === 'string' ? req.query.brand : undefined;
+  const outlets = await listOutlets({ outletId, brand });
 
   // Petpooja sync codes are integration config, not something non-admins need to see.
   const isAdmin = req.user?.role === 'ADMIN';

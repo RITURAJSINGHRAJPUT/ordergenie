@@ -7,6 +7,8 @@ export interface AuthUser {
   role: Role;
   outletId: string | null;
   outletName?: string | null;
+  /** null = every brand. Coarser scope than outletId. */
+  brand?: string | null;
 }
 
 export interface LoginResponse {
@@ -319,6 +321,7 @@ export interface UserRow {
   roleId: string;
   outletId: string | null;
   outletName: string | null;
+  brand: string | null;
   isActive: boolean;
   lastLoginAt: string | null;
 }

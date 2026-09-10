@@ -23,3 +23,12 @@ export function outletRestrictionFor(req: Request): string | undefined {
   }
   return undefined;
 }
+
+/**
+ * The brand a detail-by-id lookup must be restricted to, or undefined when the caller isn't
+ * brand-scoped. The brand counterpart of outletRestrictionFor — query filtering doesn't reach
+ * `:id` routes, so those have to check the loaded record's brand themselves.
+ */
+export function brandRestrictionFor(req: Request): string | undefined {
+  return req.user?.brand ?? undefined;
+}
