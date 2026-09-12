@@ -55,6 +55,33 @@ export function useAddClassAItem() {
   return { ...mutation, suggestions, clearSuggestions: () => setSuggestions([]) };
 }
 
+/** PO names that look like they belong to this item, ranked by the backend's matcher. */
+export function usePurchaseAliasSuggestions(id: string | null) {
+  return useQuery({
+    queryKey: ['purchase-alias-suggestions', id],
+    queryFn: async () =>
+      (await apiClient.get<ApiEnvelope<string[]>>(`/class-a-items/${id}/purchase-aliases/suggestions`)).data.data,
+    enabled: Boolean(id),
+  });
+}
+
+export function useSetPurchaseAliases() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, purchaseAliases }: { id: string; purchaseAliases: string[]; brand: string }) =>
+      apiClient.put(`/class-a-items/${id}/purchase-aliases`, { purchaseAliases }),
+    onSuccess: (_data, input) => {
+      toast.success('Purchase names updated');
+      qc.invalidateQueries({ queryKey: ['class-a-items', input.brand] });
+      qc.invalidateQueries({ queryKey: ['reconciliation'] });
+    },
+    onError: (error) => {
+      const body = axios.isAxiosError(error) ? (error.response?.data as { message?: string } | undefined) : undefined;
+      toast.error(body?.message ?? 'Failed to update purchase names');
+    },
+  });
+}
+
 export function useRemoveClassAItem() {
   const qc = useQueryClient();
   return useMutation({

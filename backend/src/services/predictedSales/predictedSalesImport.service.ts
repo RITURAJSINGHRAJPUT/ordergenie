@@ -125,6 +125,92 @@ async function chunkedUpsert(rows: PendingUpsert[]): Promise<{ created: number; 
  * the run as a PredictionImportLog row (RUNNING -> SUCCESS/PARTIAL/FAILED) the same
  * way syncRunner.service.ts logs SyncLog rows for Petpooja syncs.
  */
+/** Shared tail for both formats: upsert, stamp the log, and shape the result. */
+async function persistPending(
+  rows: PendingUpsert[],
+  logId: string,
+  sheetsSkipped: SkippedSheet[],
+  sheetsProcessed: number
+): Promise<PredictionImportResult> {
+  const { created, updated } = await chunkedUpsert(rows);
+  const status = sheetsSkipped.length > 0 ? SyncStatus.PARTIAL : SyncStatus.SUCCESS;
+
+  await prisma.predictionImportLog.update({
+    where: { id: logId },
+    data: { status, completedAt: new Date(), rowsCreated: created, rowsUpdated: updated, sheetsProcessed, sheetsSkipped: sheetsSkipped as object },
+  });
+
+  return { logId, status, rowsCreated: created, rowsUpdated: updated, sheetsProcessed, sheetsSkipped, errorMessage: null };
+}
+
+/** True when the workbook is the flat Outlet | Item | Date | Qty template. */
+function isFlatTemplate(workbook: Workbook): boolean {
+  const sheet = workbook.getWorksheet('Predictions') ?? workbook.worksheets[0];
+  if (!sheet) return false;
+  const headers: string[] = [];
+  sheet.getRow(1).eachCell((cell) => headers.push(String(cell.value ?? '').trim().toLowerCase()));
+  return ['outlet', 'item', 'date', 'qty'].every((h) => headers.includes(h));
+}
+
+/**
+ * Flat template parser. One row per figure, so a month can be pasted in a single block.
+ *
+ * A blank Qty is skipped rather than stored as 0 — a stored 0 would read as "we predict zero
+ * sales" and suppress reconciliation's 7-day-average fallback, which is not the same thing as
+ * "no forecast given".
+ */
+async function parseFlatTemplate(
+  workbook: Workbook,
+  fileName: string,
+  logId: string,
+  skipped: SkippedSheet[]
+): Promise<PendingUpsert[]> {
+  const sheet = workbook.getWorksheet('Predictions') ?? workbook.worksheets[0]!;
+  const outlets = await prisma.outlet.findMany({ select: { id: true, name: true, rid: true } });
+  const byName = new Map(outlets.map((o) => [o.name.trim().toLowerCase(), o.id]));
+  const byRid = new Map(outlets.map((o) => [o.rid, o.id]));
+
+  const headers = new Map<string, number>();
+  sheet.getRow(1).eachCell((cell, col) => headers.set(String(cell.value ?? '').trim().toLowerCase(), col));
+  const col = (name: string) => headers.get(name)!;
+
+  const pending: PendingUpsert[] = [];
+  const unknownOutlets = new Set<string>();
+  let badDates = 0;
+
+  sheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return;
+
+    const qtyRaw = row.getCell(col('qty')).value;
+    if (qtyRaw === null || qtyRaw === undefined || String(qtyRaw).trim() === '') return;
+    const predictedQty = Number(qtyRaw);
+    if (!Number.isFinite(predictedQty)) return;
+
+    const outletLabel = String(row.getCell(col('outlet')).value ?? '').trim();
+    const outletId = byName.get(outletLabel.toLowerCase()) ?? byRid.get(outletLabel);
+    if (!outletId) {
+      if (outletLabel) unknownOutlets.add(outletLabel);
+      return;
+    }
+
+    const itemName = String(row.getCell(col('item')).value ?? '').trim();
+    if (!itemName) return;
+
+    const stockDate = cellDateString(row.getCell(col('date')).value);
+    if (!stockDate) {
+      badDates += 1;
+      return;
+    }
+
+    pending.push({ outletId, itemName, stockDate, predictedQty, source: fileName, importLogId: logId });
+  });
+
+  for (const name of unknownOutlets) skipped.push({ sheet: name, reason: 'No active outlet with this name' });
+  if (badDates > 0) skipped.push({ sheet: sheet.name, reason: `${badDates} row(s) had an unreadable Date` });
+
+  return pending;
+}
+
 export async function parseAndImportPredictionWorkbook(
   buffer: Buffer,
   fileName: string,
@@ -145,6 +231,13 @@ export async function parseAndImportPredictionWorkbook(
     // this drops to `any` at the call site only.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await workbook.xlsx.load(buffer as any);
+
+    // The lean template and the original 16-sheet workbook are both accepted, so historical
+    // files still re-import and there's no flag day where an old one silently fails.
+    if (isFlatTemplate(workbook)) {
+      const pending = await parseFlatTemplate(workbook, fileName, log.id, sheetsSkipped);
+      return await persistPending(pending, log.id, sheetsSkipped, 1);
+    }
 
     const outlets = await prisma.outlet.findMany({ where: { rid: { in: Object.values(SHEET_TO_RID) } } });
     const ridToOutletId = new Map(outlets.map((o) => [o.rid, o.id]));
@@ -195,15 +288,7 @@ export async function parseAndImportPredictionWorkbook(
       return { logId: log.id, status: SyncStatus.FAILED, rowsCreated: 0, rowsUpdated: 0, sheetsProcessed: 0, sheetsSkipped, errorMessage };
     }
 
-    const { created, updated } = await chunkedUpsert(pending);
-    const status = sheetsSkipped.length > 0 ? SyncStatus.PARTIAL : SyncStatus.SUCCESS;
-
-    await prisma.predictionImportLog.update({
-      where: { id: log.id },
-      data: { status, completedAt: new Date(), rowsCreated: created, rowsUpdated: updated, sheetsProcessed, sheetsSkipped: sheetsSkipped as object },
-    });
-
-    return { logId: log.id, status, rowsCreated: created, rowsUpdated: updated, sheetsProcessed, sheetsSkipped, errorMessage: null };
+    return await persistPending(pending, log.id, sheetsSkipped, sheetsProcessed);
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     await prisma.predictionImportLog.update({

@@ -6,6 +6,8 @@ import {
   listClassAItemsHandler,
   addClassAItemHandler,
   removeClassAItemHandler,
+  setPurchaseAliasesHandler,
+  suggestPurchaseAliasesHandler,
   getClassAItemsSummaryHandler,
 } from '../controllers/classAItems.controller';
 
@@ -19,6 +21,8 @@ router.use(verifyJwt, requireRole(RoleName.SUPER_ADMIN, RoleName.ADMIN, RoleName
 router.get('/summary', getClassAItemsSummaryHandler);
 router.get('/', listClassAItemsHandler);
 router.post('/', canWrite, addClassAItemHandler);
+router.get('/:id/purchase-aliases/suggestions', suggestPurchaseAliasesHandler);
+router.put('/:id/purchase-aliases', canWrite, setPurchaseAliasesHandler);
 router.delete('/:id', canWrite, removeClassAItemHandler);
 
 export default router;

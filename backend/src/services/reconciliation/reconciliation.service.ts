@@ -56,6 +56,39 @@ function parseDateParam(value: string | undefined): Date {
  * window would make rows appear/disappear as the selected date changes, which
  * reads as "missing data" rather than "didn't sell that day."
  */
+/**
+ * itemName -> the PO names that also count toward it.
+ *
+ * Sold and purchased names never overlap in Petpooja data — "Coke" is sold while
+ * "Coke 300 Ml" is purchased, "Saucy Momos" is sold while "Soucy Momos" is purchased — so
+ * a Class A Item's `value` matches sales and its purchaseAliases match purchase orders.
+ */
+function buildPurchaseAliasMap(entries: Awaited<ReturnType<typeof listClassAItems>>): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const entry of entries) {
+    if (entry.purchaseAliases.length > 0) map.set(entry.value, entry.purchaseAliases);
+  }
+  return map;
+}
+
+/**
+ * Re-keys raw PO quantities from PO item names onto ingredient names, folding aliases in.
+ * Resolved once so the row's PO column and the Opening carry-forward can't disagree.
+ */
+function resolvePoByIngredient(
+  itemNames: Iterable<string>,
+  aliases: Map<string, string[]>,
+  poByItem: Map<string, number>
+): Map<string, number> {
+  const resolved = new Map<string, number>();
+  for (const itemName of itemNames) {
+    let total = poByItem.get(itemName) ?? 0;
+    for (const alias of aliases.get(itemName) ?? []) total += poByItem.get(alias) ?? 0;
+    if (total !== 0) resolved.set(itemName, total);
+  }
+  return resolved;
+}
+
 function buildIngredientUniverse(
   entries: Awaited<ReturnType<typeof listClassAItems>>,
   categorySoldItems: { itemName: string; category: string | null }[]
@@ -198,7 +231,22 @@ function resolvePredictedSales(
   for (const r of rows) {
     wrapped.set(r.itemName, new Map([[dayKey, toNum(r.predictedQty)]]));
   }
+
+  // A forecast entered against an ingredient name wins over the derived sum. Deriving
+  // "Big Pizza Dough" needs a figure for all 84 pizza variants that trigger it, which no
+  // one is going to fill in; one dough total per day is what the template asks for. The
+  // derived sum still applies whenever nothing was entered — and real *sales* are untouched,
+  // since those carry the actual pizza names.
+  const explicit = new Map<string, number>();
+  for (const ingredientName of recipesByIngredient.keys()) {
+    const entered = wrapped.get(ingredientName)?.get(dayKey);
+    if (entered !== undefined) explicit.set(ingredientName, entered);
+  }
+
   applyRecipesToSalesMap(wrapped, recipesByIngredient);
+  for (const [ingredientName, qty] of explicit) {
+    wrapped.set(ingredientName, new Map([[dayKey, qty]]));
+  }
 
   const flat = new Map<string, number>();
   for (const [itemName, perDay] of wrapped) {
@@ -422,11 +470,14 @@ export async function getReconciliationDashboard(query: ReconciliationQuery) {
   ]);
 
   const universe = buildIngredientUniverse(classAEntries, categorySoldItems);
+  const purchaseAliases = buildPurchaseAliasMap(classAEntries);
+  const poToday = resolvePoByIngredient(universe.keys(), purchaseAliases, poByItem);
+  const poNextDay = resolvePoByIngredient(universe.keys(), purchaseAliases, poNextDayByItem);
   const predictedByItem = resolvePredictedSales(predictedRows, dayKey, recipesByIngredient);
   applyRecipesToSalesMap(salesByItem, recipesByIngredient);
 
   // Mutates manualEntries in place, so the rows below already see the carried-over openings.
-  await carryForwardOpenings(outletId, day, universe.keys(), manualEntries, prevDayEntries, poByItem);
+  await carryForwardOpenings(outletId, day, universe.keys(), manualEntries, prevDayEntries, poToday);
 
   const rows = Array.from(universe.entries())
     .map(([itemName, classAItemId]) => {
@@ -459,8 +510,8 @@ export async function getReconciliationDashboard(query: ReconciliationQuery) {
           actualClosing: manual?.actualClosing ?? 0,
           salesToday,
           predictedSales,
-          poToday: poByItem.get(itemName) ?? 0,
-          poNextDay: poNextDayByItem.get(itemName) ?? 0,
+          poToday: poToday.get(itemName) ?? 0,
+          poNextDay: poNextDay.get(itemName) ?? 0,
         },
         dayKey
       );

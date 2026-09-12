@@ -10,7 +10,7 @@ export async function listClassAItems(brand: string) {
 }
 
 /** Every item name that actually exists for a brand, across both Sales and Purchase data. */
-async function listRealItemNames(brand: string): Promise<string[]> {
+export async function listRealItemNames(brand: string): Promise<string[]> {
   const [saleRows, poRows] = await Promise.all([
     prisma.saleItem.findMany({
       where: { sale: { outlet: { brand } } },
@@ -75,6 +75,50 @@ export async function addClassAItem(brand: string, type: ClassAItemType, value: 
     update: {},
     create: { brand, type, value: resolved },
   });
+}
+
+/** Distinct PO item names for a brand — the candidate pool for purchase aliases. */
+export async function listPurchaseItemNames(brand: string): Promise<string[]> {
+  const rows = await prisma.purchaseOrderItem.findMany({
+    where: { purchaseOrder: { outlet: { brand }, status: { not: 'CANCELLED' } } },
+    select: { itemName: true },
+    distinct: ['itemName'],
+  });
+  return rows.map((r) => r.itemName.trim()).filter(Boolean).sort((a, b) => a.localeCompare(b));
+}
+
+/**
+ * The PO names most likely to belong to a Class A Item, ranked by the same substring-then-
+ * edit-distance scoring used for the add-item suggestions.
+ */
+export async function suggestPurchaseAliases(id: string, limit = 8): Promise<string[]> {
+  const item = await prisma.classAItem.findUnique({ where: { id } });
+  if (!item) throw new AppError('Class A item not found', 404);
+  const pool = await listPurchaseItemNames(item.brand);
+  return suggestNames(item.value, pool, limit);
+}
+
+export async function setPurchaseAliases(id: string, aliases: string[]) {
+  const item = await prisma.classAItem.findUnique({ where: { id } });
+  if (!item) throw new AppError('Class A item not found', 404);
+
+  const pool = await listPurchaseItemNames(item.brand);
+  const byLower = new Map(pool.map((n) => [n.toLowerCase(), n]));
+  const resolved: string[] = [];
+  for (const alias of aliases) {
+    // Store the real PO spelling, and reject anything that was never purchased — an alias
+    // matching nothing would silently keep the PO column at zero, which is the very bug
+    // this exists to fix.
+    const match = byLower.get(alias.trim().toLowerCase());
+    if (!match) {
+      throw new AppError(`"${alias}" is not a purchase order item name for ${item.brand}`, 400, {
+        suggestions: suggestNames(alias, pool),
+      });
+    }
+    if (!resolved.includes(match)) resolved.push(match);
+  }
+
+  return prisma.classAItem.update({ where: { id }, data: { purchaseAliases: resolved } });
 }
 
 export async function removeClassAItem(id: string) {

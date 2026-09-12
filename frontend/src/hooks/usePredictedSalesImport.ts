@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { apiClient } from '@/lib/api-client';
+import { triggerBlobDownload } from '@/lib/download';
 import type { ApiEnvelope, PaginationMeta, PredictionImportLogRow, PredictionImportResult, PredictionSummary } from '@/types/api';
 
 export function usePredictionSummary() {
@@ -34,6 +35,17 @@ export function useDeletePredictionImportLog() {
       qc.invalidateQueries({ queryKey: ['prediction-import-logs'] });
     },
     onError: () => toast.error('Failed to delete import'),
+  });
+}
+
+/** Downloads the blank template for a month, pre-filled with the rows worth forecasting. */
+export function useDownloadPredictionTemplate() {
+  return useMutation({
+    mutationFn: async (month: string) => {
+      const res = await apiClient.get('/predicted-sales/template', { params: { month }, responseType: 'blob' });
+      triggerBlobDownload(res.data as Blob, `sales-forecast-${month}.xlsx`);
+    },
+    onError: () => toast.error('Failed to generate template'),
   });
 }
 

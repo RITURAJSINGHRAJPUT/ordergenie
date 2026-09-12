@@ -9,6 +9,7 @@ import {
   getPredictionSummaryHandler,
   listPredictionImportLogsHandler,
   deletePredictionImportLogHandler,
+  downloadPredictionTemplateHandler,
 } from '../controllers/predictedSalesImport.controller';
 
 const router = Router();
@@ -23,6 +24,7 @@ const canManageForecast = requirePageGrant(SALES_FORECAST_GRANT);
 // Registered before the shared verifyJwt+scopeToOutlet, scopeToBrand block since they don't need
 // outlet-scoping (a workbook upload spans every outlet in one go).
 router.post('/import', canManageForecast, uploadPredictionWorkbookMiddleware, importPredictionWorkbookHandler);
+router.get('/template', canManageForecast, downloadPredictionTemplateHandler);
 router.get('/summary', canManageForecast, getPredictionSummaryHandler);
 router.get('/import-logs', canManageForecast, listPredictionImportLogsHandler);
 router.delete('/import-logs/:id', canManageForecast, deletePredictionImportLogHandler);

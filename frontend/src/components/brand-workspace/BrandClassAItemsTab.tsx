@@ -9,11 +9,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useClassAItems, useClassAItemsSummary, useAddClassAItem, useRemoveClassAItem } from '@/hooks/useClassAItems';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  useClassAItems,
+  useClassAItemsSummary,
+  useAddClassAItem,
+  useRemoveClassAItem,
+  usePurchaseAliasSuggestions,
+  useSetPurchaseAliases,
+} from '@/hooks/useClassAItems';
 import { useItemCategories } from '@/hooks/useItemCategories';
 import { useAuthStore } from '@/store/authStore';
 import { formatCurrency, formatNumber } from '@/lib/format';
-import type { ClassAItemSummaryRow, ClassAItemType } from '@/types/api';
+import { cn } from '@/lib/utils';
+import type { ClassAItem, ClassAItemSummaryRow, ClassAItemType } from '@/types/api';
 
 export function BrandClassAItemsTab({ brand, outletId }: { brand: string; outletId: string }) {
   const isViewer = useAuthStore((s) => s.user)?.role === 'VIEWER';
@@ -25,6 +34,7 @@ export function BrandClassAItemsTab({ brand, outletId }: { brand: string; outlet
 
   const [type, setType] = useState<ClassAItemType>('ITEM');
   const [value, setValue] = useState('');
+  const [aliasTarget, setAliasTarget] = useState<ClassAItem | null>(null);
 
   function handleAdd() {
     if (!value.trim()) return;
@@ -107,6 +117,21 @@ export function BrandClassAItemsTab({ brand, outletId }: { brand: string; outlet
               <Badge key={entry.id} variant="secondary" className="gap-1 pr-1">
                 {entry.value}
                 <span className="text-muted-foreground">({entry.type === 'ITEM' ? 'item' : 'category'})</span>
+                {entry.type === 'ITEM' && !isViewer && (
+                  <button
+                    type="button"
+                    onClick={() => setAliasTarget(entry)}
+                    title="Link the purchase-order names that belong to this item"
+                    className={cn(
+                      'ml-1 rounded px-1.5 text-[10px] font-medium transition-colors',
+                      entry.purchaseAliases.length > 0
+                        ? 'bg-primary text-primary-foreground'
+                        : 'border text-muted-foreground hover:bg-muted-foreground/20'
+                    )}
+                  >
+                    PO {entry.purchaseAliases.length > 0 ? `×${entry.purchaseAliases.length}` : 'link'}
+                  </button>
+                )}
                 {!isViewer && (
                   <button
                     type="button"
@@ -121,7 +146,73 @@ export function BrandClassAItemsTab({ brand, outletId }: { brand: string; outlet
           </div>
         </CardContent>
       </Card>
+
+      {aliasTarget && (
+        <PurchaseAliasEditor item={aliasTarget} brand={brand} onClose={() => setAliasTarget(null)} />
+      )}
     </div>
+  );
+}
+
+/**
+ * Sold names and purchased names never match in Petpooja data — "Coke" is sold while
+ * "Coke 300 Ml" is purchased — so an item needs its PO spellings listed explicitly or its
+ * PO column stays at zero. Suggestions come from real purchase-order names.
+ */
+function PurchaseAliasEditor({ item, brand, onClose }: { item: ClassAItem; brand: string; onClose: () => void }) {
+  const { data: suggestions, isLoading } = usePurchaseAliasSuggestions(item.id);
+  const save = useSetPurchaseAliases();
+  const [selected, setSelected] = useState<string[]>(item.purchaseAliases);
+
+  const toggle = (name: string) =>
+    setSelected((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]));
+
+  const options = [...new Set([...selected, ...(suggestions ?? [])])];
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Purchase names for &ldquo;{item.value}&rdquo;</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-muted-foreground">
+          Purchase orders often spell an item differently from the menu. Tick the PO names that belong to this item so
+          their quantities show in the reconciliation PO column.
+        </p>
+        {isLoading ? (
+          <Skeleton className="h-24 w-full" />
+        ) : options.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No purchase-order items resemble this name.</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {options.map((name) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => toggle(name)}
+                className={cn(
+                  'rounded-full border px-2.5 py-1 text-xs transition-colors',
+                  selected.includes(name) ? 'border-primary bg-primary text-primary-foreground' : 'hover:bg-muted'
+                )}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            disabled={save.isPending}
+            onClick={() => save.mutate({ id: item.id, purchaseAliases: selected, brand }, { onSuccess: onClose })}
+          >
+            {save.isPending ? 'Saving…' : 'Save'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

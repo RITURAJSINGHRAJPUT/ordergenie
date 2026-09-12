@@ -1,11 +1,13 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { UploadCloud } from 'lucide-react';
+import { Download, UploadCloud } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Pagination } from '@/components/shared/Pagination';
@@ -14,6 +16,7 @@ import {
   usePredictionImportLogs,
   useImportPredictionWorkbook,
   useDeletePredictionImportLog,
+  useDownloadPredictionTemplate,
 } from '@/hooks/usePredictedSalesImport';
 import { useResettingPage } from '@/hooks/useResettingPage';
 import { formatDate, formatTime } from '@/lib/format';
@@ -31,6 +34,8 @@ export default function PredictionsImportPage() {
   const [page, setPage] = useResettingPage('predictions-import');
   const { data: logs, isLoading: logsLoading } = usePredictionImportLogs(page);
   const importMutation = useImportPredictionWorkbook();
+  const templateMutation = useDownloadPredictionTemplate();
+  const [templateMonth, setTemplateMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [deleting, setDeleting] = useState<PredictionImportLogRow | null>(null);
@@ -103,6 +108,33 @@ export default function PredictionsImportPage() {
               <UploadCloud className="mr-1 h-4 w-4" />
               {importMutation.isPending ? 'Uploading…' : 'Upload & Import'}
             </Button>
+          </div>
+
+          <div className="flex flex-wrap items-end gap-2 rounded-md border p-3">
+            <div className="space-y-1">
+              <Label htmlFor="template-month" className="text-xs text-muted-foreground">
+                Template month
+              </Label>
+              <Input
+                id="template-month"
+                type="month"
+                value={templateMonth}
+                onChange={(e) => setTemplateMonth(e.target.value)}
+                className="h-9 w-[170px]"
+              />
+            </div>
+            <Button
+              variant="outline"
+              disabled={!templateMonth || templateMutation.isPending}
+              onClick={() => templateMutation.mutate(templateMonth)}
+            >
+              <Download className="mr-1 h-4 w-4" />
+              {templateMutation.isPending ? 'Preparing…' : 'Download template'}
+            </Button>
+            <p className="text-xs text-muted-foreground sm:ml-2 sm:max-w-md">
+              A blank <strong>Outlet | Item | Date | Qty</strong> sheet listing only the items reconciliation reads. Fill
+              the Qty column and upload it back — leave a cell blank to keep the 7-day-average fallback.
+            </p>
           </div>
 
           {lastResult && (

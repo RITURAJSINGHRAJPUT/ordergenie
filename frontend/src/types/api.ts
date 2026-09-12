@@ -120,6 +120,8 @@ export interface ClassAItem {
   brand: string;
   type: ClassAItemType;
   value: string;
+  /** PO item names this entry also counts, since sold and purchased names differ. */
+  purchaseAliases: string[];
   createdAt: string;
 }
 

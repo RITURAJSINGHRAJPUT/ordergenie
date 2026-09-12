@@ -405,6 +405,10 @@ model ClassAItem {
   brand     String
   type      ClassAItemType
   value     String
+  // Purchase-order names this item also counts. Sold names and purchased names never
+  // overlap in Petpooja ("Coke" is sold, "Coke 300 Ml" is purchased; "Saucy Momos" is
+  // sold, "Soucy Momos" is purchased), so `value` matches sales and these match POs.
+  purchaseAliases String[]  @default([])
   createdAt DateTime       @default(now())
 
   @@unique([brand, type, value])

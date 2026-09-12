@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import multer from 'multer';
 import { asyncHandler } from '../utils/asyncHandler';
+import { buildPredictionTemplate } from '../services/predictedSales/predictionTemplate.service';
 import { ok, AppError } from '../utils/apiResponse';
 import {
   parseAndImportPredictionWorkbook,
@@ -46,4 +47,14 @@ export const listPredictionImportLogsHandler = asyncHandler(async (req: Request,
 export const deletePredictionImportLogHandler = asyncHandler(async (req: Request, res: Response) => {
   const result = await deletePredictionImport(req.params.id);
   return ok(res, { removed: true, rowsDeleted: result.rowsDeleted });
+});
+
+export const downloadPredictionTemplateHandler = asyncHandler(async (req: Request, res: Response) => {
+  const month = typeof req.query.month === 'string' ? req.query.month : undefined;
+  if (!month) throw new AppError('month is required, e.g. 2026-10', 400);
+
+  const { buffer } = await buildPredictionTemplate(month);
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="sales-forecast-${month}.xlsx"`);
+  return res.send(buffer);
 });

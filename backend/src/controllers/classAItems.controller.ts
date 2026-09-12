@@ -3,7 +3,14 @@ import { z } from 'zod';
 import { ClassAItemType } from '@prisma/client';
 import { asyncHandler } from '../utils/asyncHandler';
 import { ok, created, AppError } from '../utils/apiResponse';
-import { listClassAItems, addClassAItem, removeClassAItem, getClassAItemsSummary } from '../services/classAItems/classAItems.service';
+import {
+  listClassAItems,
+  addClassAItem,
+  removeClassAItem,
+  getClassAItemsSummary,
+  setPurchaseAliases,
+  suggestPurchaseAliases,
+} from '../services/classAItems/classAItems.service';
 
 const addSchema = z.object({
   brand: z.string().min(1),
@@ -22,6 +29,18 @@ export const addClassAItemHandler = asyncHandler(async (req: Request, res: Respo
   const input = addSchema.parse(req.body);
   const item = await addClassAItem(input.brand, input.type, input.value);
   return created(res, item);
+});
+
+const aliasesSchema = z.object({ purchaseAliases: z.array(z.string()) });
+
+export const setPurchaseAliasesHandler = asyncHandler(async (req: Request, res: Response) => {
+  const { purchaseAliases } = aliasesSchema.parse(req.body);
+  const item = await setPurchaseAliases(req.params.id, purchaseAliases);
+  return ok(res, item);
+});
+
+export const suggestPurchaseAliasesHandler = asyncHandler(async (req: Request, res: Response) => {
+  return ok(res, await suggestPurchaseAliases(req.params.id));
 });
 
 export const removeClassAItemHandler = asyncHandler(async (req: Request, res: Response) => {
