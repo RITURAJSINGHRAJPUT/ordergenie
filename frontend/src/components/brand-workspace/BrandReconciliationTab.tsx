@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/shared/Pagination';
 import { SuggestionChips } from '@/components/brand-workspace/BrandClassAItemsTab';
+import { PurchaseAliasEditor } from '@/components/brand-workspace/PurchaseAliasEditor';
 import { useReconciliation, useUpsertReconciliationEntry } from '@/hooks/useReconciliation';
 import { useAddClassAItem, useRemoveClassAItem } from '@/hooks/useClassAItems';
 import { useResettingPage } from '@/hooks/useResettingPage';
@@ -146,6 +147,7 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
   const addClassAItem = useAddClassAItem();
 
   const [newItemName, setNewItemName] = useState('');
+  const [aliasTarget, setAliasTarget] = useState<ReconciliationRow | null>(null);
   const isAllOutlets = outletId === 'all';
 
   function handleAddIngredient() {
@@ -263,6 +265,7 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
                         date={date}
                         canManageSelection={!isHeadChef && !isViewer}
                         canEdit={!isViewer}
+                        onLinkPo={setAliasTarget}
                       />
                     ))}
                   </TableBody>
@@ -280,6 +283,7 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
                     date={date}
                     canManageSelection={!isHeadChef && !isViewer}
                     canEdit={!isViewer}
+                    onLinkPo={setAliasTarget}
                   />
                 ))}
               </div>
@@ -320,12 +324,22 @@ export function BrandReconciliationTab({ brand, outletId }: { brand: string; out
           )}
         </CardContent>
       </Card>
+
+      {aliasTarget && (
+        <PurchaseAliasEditor
+          brand={brand}
+          itemName={aliasTarget.itemName}
+          current={aliasTarget.purchaseAliases}
+          onClose={() => setAliasTarget(null)}
+        />
+      )}
     </div>
   );
 }
 
 interface RowProps {
   row: ReconciliationRow;
+  onLinkPo: (row: ReconciliationRow) => void;
   outletId: string;
   brand: string;
   date: string;
@@ -333,7 +347,7 @@ interface RowProps {
   canEdit: boolean;
 }
 
-function ReconciliationTableRow({ row, outletId, brand, date, canManageSelection, canEdit }: RowProps) {
+function ReconciliationTableRow({ row, outletId, brand, date, canManageSelection, canEdit, onLinkPo }: RowProps) {
   const editor = useRowEditor(row, outletId, date);
   const removeClassAItem = useRemoveClassAItem();
 
@@ -375,7 +389,27 @@ function ReconciliationTableRow({ row, outletId, brand, date, canManageSelection
         )}
       </TableCell>
       <TableCell className="text-center">{formatNumber(row.predictedSales)}</TableCell>
-      <TableCell className="text-center">{formatNumber(row.poToday)}</TableCell>
+      <TableCell className="text-center">
+        {canManageSelection ? (
+          <button
+            type="button"
+            onClick={() => onLinkPo(row)}
+            title={
+              row.purchaseAliases.length > 0
+                ? `Also counting: ${row.purchaseAliases.join(', ')}`
+                : 'Link the purchase-order names for this item'
+            }
+            className={cn(
+              'rounded px-1.5 py-0.5 transition-colors hover:bg-muted',
+              row.poToday === 0 && row.purchaseAliases.length === 0 && 'text-muted-foreground underline decoration-dotted'
+            )}
+          >
+            {formatNumber(row.poToday)}
+          </button>
+        ) : (
+          formatNumber(row.poToday)
+        )}
+      </TableCell>
       <TableCell className="text-center">{formatNumber(row.poNextDay)}</TableCell>
       <TableCell className="text-center">{formatNumber(row.nextDayOpening)}</TableCell>
       <TableCell className="text-center">{varianceBadge(row.salesVariance, row.predictedSales)}</TableCell>
@@ -418,7 +452,7 @@ function StatTile({ label, value, tone }: { label: string; value: string; tone?:
   );
 }
 
-function ReconciliationCard({ row, outletId, brand, date, canManageSelection, canEdit }: RowProps) {
+function ReconciliationCard({ row, outletId, brand, date, canManageSelection, canEdit, onLinkPo }: RowProps) {
   const editor = useRowEditor(row, outletId, date);
   const removeClassAItem = useRemoveClassAItem();
 
@@ -478,7 +512,13 @@ function ReconciliationCard({ row, outletId, brand, date, canManageSelection, ca
           <StatTile label="Closing (AI)" value={formatNumber(row.factualClosingAI)} />
           <StatTile label="Sales" value={formatNumber(row.salesToday)} />
           <StatTile label="Sales (AI)" value={formatNumber(row.predictedSales)} />
-          <StatTile label="PO" value={formatNumber(row.poToday)} />
+          {canManageSelection ? (
+            <button type="button" onClick={() => onLinkPo(row)} className="text-left">
+              <StatTile label="PO — tap to link" value={formatNumber(row.poToday)} />
+            </button>
+          ) : (
+            <StatTile label="PO" value={formatNumber(row.poToday)} />
+          )}
           <StatTile label="Next Day PO" value={formatNumber(row.poNextDay)} />
           <StatTile label="Next Day Opening" value={formatNumber(row.nextDayOpening)} />
           <StatTile

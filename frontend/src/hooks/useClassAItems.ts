@@ -56,20 +56,24 @@ export function useAddClassAItem() {
 }
 
 /** PO names that look like they belong to this item, ranked by the backend's matcher. */
-export function usePurchaseAliasSuggestions(id: string | null) {
+export function usePurchaseAliasSuggestions(brand: string, itemName: string | null) {
   return useQuery({
-    queryKey: ['purchase-alias-suggestions', id],
+    queryKey: ['purchase-alias-suggestions', brand, itemName],
     queryFn: async () =>
-      (await apiClient.get<ApiEnvelope<string[]>>(`/class-a-items/${id}/purchase-aliases/suggestions`)).data.data,
-    enabled: Boolean(id),
+      (
+        await apiClient.get<ApiEnvelope<string[]>>('/class-a-items/purchase-aliases/suggestions', {
+          params: { brand, itemName },
+        })
+      ).data.data,
+    enabled: Boolean(itemName),
   });
 }
 
 export function useSetPurchaseAliases() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, purchaseAliases }: { id: string; purchaseAliases: string[]; brand: string }) =>
-      apiClient.put(`/class-a-items/${id}/purchase-aliases`, { purchaseAliases }),
+    mutationFn: async ({ brand, itemName, purchaseAliases }: { brand: string; itemName: string; purchaseAliases: string[] }) =>
+      apiClient.put('/class-a-items/purchase-aliases', { brand, itemName, purchaseAliases }),
     onSuccess: (_data, input) => {
       toast.success('Purchase names updated');
       qc.invalidateQueries({ queryKey: ['class-a-items', input.brand] });

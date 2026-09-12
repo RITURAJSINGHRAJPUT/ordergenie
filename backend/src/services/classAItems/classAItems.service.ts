@@ -87,38 +87,49 @@ export async function listPurchaseItemNames(brand: string): Promise<string[]> {
   return rows.map((r) => r.itemName.trim()).filter(Boolean).sort((a, b) => a.localeCompare(b));
 }
 
-/**
- * The PO names most likely to belong to a Class A Item, ranked by the same substring-then-
- * edit-distance scoring used for the add-item suggestions.
- */
-export async function suggestPurchaseAliases(id: string, limit = 8): Promise<string[]> {
-  const item = await prisma.classAItem.findUnique({ where: { id } });
-  if (!item) throw new AppError('Class A item not found', 404);
-  const pool = await listPurchaseItemNames(item.brand);
-  return suggestNames(item.value, pool, limit);
+/** itemName -> the PO names linked to it, for one brand. */
+export async function listPurchaseAliases(brand: string): Promise<Map<string, string[]>> {
+  const rows = await prisma.purchaseAlias.findMany({ where: { brand }, orderBy: { poItemName: 'asc' } });
+  const map = new Map<string, string[]>();
+  for (const r of rows) {
+    if (!map.has(r.itemName)) map.set(r.itemName, []);
+    map.get(r.itemName)!.push(r.poItemName);
+  }
+  return map;
 }
 
-export async function setPurchaseAliases(id: string, aliases: string[]) {
-  const item = await prisma.classAItem.findUnique({ where: { id } });
-  if (!item) throw new AppError('Class A item not found', 404);
+/**
+ * PO names most likely to belong to an ingredient, ranked by the same substring-then-edit-
+ * distance scoring used for the add-item suggestions. Keyed by name, so it works for a row
+ * that came from a CATEGORY expansion just as well as one backed by a ClassAItem.
+ */
+export async function suggestPurchaseAliases(brand: string, itemName: string, limit = 8): Promise<string[]> {
+  return suggestNames(itemName, await listPurchaseItemNames(brand), limit);
+}
 
-  const pool = await listPurchaseItemNames(item.brand);
+export async function setPurchaseAliases(brand: string, itemName: string, aliases: string[]) {
+  const pool = await listPurchaseItemNames(brand);
   const byLower = new Map(pool.map((n) => [n.toLowerCase(), n]));
+
   const resolved: string[] = [];
   for (const alias of aliases) {
-    // Store the real PO spelling, and reject anything that was never purchased — an alias
-    // matching nothing would silently keep the PO column at zero, which is the very bug
-    // this exists to fix.
+    // Store the real PO spelling, and reject anything never purchased — an alias matching
+    // nothing would silently keep the PO column at zero, the very bug this exists to fix.
     const match = byLower.get(alias.trim().toLowerCase());
     if (!match) {
-      throw new AppError(`"${alias}" is not a purchase order item name for ${item.brand}`, 400, {
+      throw new AppError(`"${alias}" is not a purchase order item name for ${brand}`, 400, {
         suggestions: suggestNames(alias, pool),
       });
     }
     if (!resolved.includes(match)) resolved.push(match);
   }
 
-  return prisma.classAItem.update({ where: { id }, data: { purchaseAliases: resolved } });
+  await prisma.$transaction([
+    prisma.purchaseAlias.deleteMany({ where: { brand, itemName } }),
+    ...resolved.map((poItemName) => prisma.purchaseAlias.create({ data: { brand, itemName, poItemName } })),
+  ]);
+
+  return { brand, itemName, poItemNames: resolved };
 }
 
 export async function removeClassAItem(id: string) {

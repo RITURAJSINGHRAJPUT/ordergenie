@@ -120,8 +120,6 @@ export interface ClassAItem {
   brand: string;
   type: ClassAItemType;
   value: string;
-  /** PO item names this entry also counts, since sold and purchased names differ. */
-  purchaseAliases: string[];
   createdAt: string;
 }
 
@@ -201,6 +199,8 @@ export interface ReconciliationRow {
   predictedSales: number;
   poToday: number;
   poNextDay: number;
+  /** PO item names linked to this row, since sold and purchased names differ. */
+  purchaseAliases: string[];
   factualClosingAI: number;
   nextDayOpening: number;
   salesVariance: number;

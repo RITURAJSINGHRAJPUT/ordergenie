@@ -31,16 +31,24 @@ export const addClassAItemHandler = asyncHandler(async (req: Request, res: Respo
   return created(res, item);
 });
 
-const aliasesSchema = z.object({ purchaseAliases: z.array(z.string()) });
+// Keyed by brand + item name rather than a ClassAItem id: a reconciliation row can come
+// from a CATEGORY expansion and have no ClassAItem of its own.
+const aliasesSchema = z.object({
+  brand: z.string().min(1),
+  itemName: z.string().min(1),
+  purchaseAliases: z.array(z.string()),
+});
 
 export const setPurchaseAliasesHandler = asyncHandler(async (req: Request, res: Response) => {
-  const { purchaseAliases } = aliasesSchema.parse(req.body);
-  const item = await setPurchaseAliases(req.params.id, purchaseAliases);
-  return ok(res, item);
+  const input = aliasesSchema.parse(req.body);
+  return ok(res, await setPurchaseAliases(input.brand, input.itemName, input.purchaseAliases));
 });
 
 export const suggestPurchaseAliasesHandler = asyncHandler(async (req: Request, res: Response) => {
-  return ok(res, await suggestPurchaseAliases(req.params.id));
+  const brand = typeof req.query.brand === 'string' ? req.query.brand : undefined;
+  const itemName = typeof req.query.itemName === 'string' ? req.query.itemName : undefined;
+  if (!brand || !itemName) throw new AppError('brand and itemName are required', 400);
+  return ok(res, await suggestPurchaseAliases(brand, itemName));
 });
 
 export const removeClassAItemHandler = asyncHandler(async (req: Request, res: Response) => {

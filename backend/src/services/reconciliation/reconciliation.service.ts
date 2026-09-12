@@ -3,7 +3,7 @@ import { prisma } from '../../config/db';
 import { dateOnlyUtc } from '../../utils/dateRange';
 import { parsePagination, toSkipTake, paginationMeta } from '../../utils/pagination';
 import { AppError } from '../../utils/apiResponse';
-import { listClassAItems } from '../classAItems/classAItems.service';
+import { listClassAItems, listPurchaseAliases } from '../classAItems/classAItems.service';
 
 // Fallback used for "predicted sales" when no imported forecast (PredictedSale,
 // see scripts/import-predicted-sales.ts) covers this item+day — a plain trailing
@@ -56,21 +56,6 @@ function parseDateParam(value: string | undefined): Date {
  * window would make rows appear/disappear as the selected date changes, which
  * reads as "missing data" rather than "didn't sell that day."
  */
-/**
- * itemName -> the PO names that also count toward it.
- *
- * Sold and purchased names never overlap in Petpooja data — "Coke" is sold while
- * "Coke 300 Ml" is purchased, "Saucy Momos" is sold while "Soucy Momos" is purchased — so
- * a Class A Item's `value` matches sales and its purchaseAliases match purchase orders.
- */
-function buildPurchaseAliasMap(entries: Awaited<ReturnType<typeof listClassAItems>>): Map<string, string[]> {
-  const map = new Map<string, string[]>();
-  for (const entry of entries) {
-    if (entry.purchaseAliases.length > 0) map.set(entry.value, entry.purchaseAliases);
-  }
-  return map;
-}
-
 /**
  * Re-keys raw PO quantities from PO item names onto ingredient names, folding aliases in.
  * Resolved once so the row's PO column and the Opening carry-forward can't disagree.
@@ -383,6 +368,8 @@ export interface ReconciliationRowInputs {
   predictedSales: number;
   poToday: number;
   poNextDay: number;
+  /** PO names linked to this row, so the UI can show and edit them where the 0 appears. */
+  purchaseAliases: string[];
 }
 
 export interface ReconciliationRow extends ReconciliationRowInputs {
@@ -446,6 +433,7 @@ export async function getReconciliationDashboard(query: ReconciliationQuery) {
   const [
     recipesByIngredient,
     classAEntries,
+    purchaseAliases,
     categorySoldItems,
     salesByItem,
     poByItem,
@@ -457,6 +445,8 @@ export async function getReconciliationDashboard(query: ReconciliationQuery) {
   ] = await Promise.all([
     getRecipeRules(brand),
     listClassAItems(brand),
+    // Keyed by item name, so a row that expanded out of a CATEGORY entry can be linked too.
+    listPurchaseAliases(brand),
     getCategorySoldItems(outletId, day),
     getSalesByItemAndDay(outletId, windowStart, day),
     getPOByItem(outletId, day),
@@ -470,7 +460,6 @@ export async function getReconciliationDashboard(query: ReconciliationQuery) {
   ]);
 
   const universe = buildIngredientUniverse(classAEntries, categorySoldItems);
-  const purchaseAliases = buildPurchaseAliasMap(classAEntries);
   const poToday = resolvePoByIngredient(universe.keys(), purchaseAliases, poByItem);
   const poNextDay = resolvePoByIngredient(universe.keys(), purchaseAliases, poNextDayByItem);
   const predictedByItem = resolvePredictedSales(predictedRows, dayKey, recipesByIngredient);
@@ -512,6 +501,7 @@ export async function getReconciliationDashboard(query: ReconciliationQuery) {
           predictedSales,
           poToday: poToday.get(itemName) ?? 0,
           poNextDay: poNextDay.get(itemName) ?? 0,
+          purchaseAliases: purchaseAliases.get(itemName) ?? [],
         },
         dayKey
       );

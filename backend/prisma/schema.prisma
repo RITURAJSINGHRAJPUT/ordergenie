@@ -405,13 +405,27 @@ model ClassAItem {
   brand     String
   type      ClassAItemType
   value     String
-  // Purchase-order names this item also counts. Sold names and purchased names never
-  // overlap in Petpooja ("Coke" is sold, "Coke 300 Ml" is purchased; "Saucy Momos" is
-  // sold, "Soucy Momos" is purchased), so `value` matches sales and these match POs.
-  purchaseAliases String[]  @default([])
   createdAt DateTime       @default(now())
 
   @@unique([brand, type, value])
+}
+
+// Maps an ingredient name to the purchase-order names that also count toward it. Sold and
+// purchased names never overlap in Petpooja ("Coke" is sold, "Coke 300 Ml" is purchased), so
+// the reconciliation row matches sales by name while these match POs.
+//
+// Keyed by itemName rather than by ClassAItem: a row can reach reconciliation either as an
+// ITEM entry or by expanding out of a CATEGORY entry (Aiko's "Drinks" becomes Coke, Diet
+// Coke, ...), and category-expanded rows have no ClassAItem of their own to hang an alias on.
+model PurchaseAlias {
+  id         String   @id @default(cuid())
+  brand      String
+  itemName   String
+  poItemName String
+  createdAt  DateTime @default(now())
+
+  @@unique([brand, itemName, poItemName])
+  @@index([brand, itemName])
 }
 
 model PredictedSale {
