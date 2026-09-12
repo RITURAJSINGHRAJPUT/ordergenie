@@ -2,10 +2,35 @@ import * as cron from 'node-cron';
 import type { ScheduledTask } from 'node-cron';
 import { SyncType } from '@prisma/client';
 import { prisma } from '../config/db';
-import { CRON_TIMEZONE } from '../config/constants';
+import { CRON_TIMEZONE, BUSINESS_HOURS_START_HOUR, BUSINESS_HOURS_END_HOUR, OFF_HOURS_SYNC_INTERVAL_MINUTES } from '../config/constants';
 import { logger } from '../utils/logger';
 
 type JobHandler = () => Promise<void>;
+
+// Only these run every 5 minutes; the rest (HISTORICAL daily, INVENTORY/TRANSFER not enabled
+// by default) don't need off-hours throttling.
+const OFF_HOURS_THROTTLED_TYPES = new Set<SyncType>([SyncType.SALES, SyncType.PURCHASE]);
+
+function istHourMinute(date: Date): { hour: number; minute: number } {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: CRON_TIMEZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  return {
+    hour: Number(parts.find((p) => p.type === 'hour')!.value),
+    minute: Number(parts.find((p) => p.type === 'minute')!.value),
+  };
+}
+
+function shouldSkipOffHoursTick(syncType: SyncType, now: Date): boolean {
+  if (!OFF_HOURS_THROTTLED_TYPES.has(syncType)) return false;
+  const { hour, minute } = istHourMinute(now);
+  const inBusinessHours = hour >= BUSINESS_HOURS_START_HOUR && hour < BUSINESS_HOURS_END_HOUR;
+  if (inBusinessHours) return false;
+  return minute % OFF_HOURS_SYNC_INTERVAL_MINUTES !== 0;
+}
 
 const jobRegistry = new Map<SyncType, ScheduledTask>();
 
@@ -29,6 +54,7 @@ async function registerJob(syncType: SyncType) {
   const task = cron.schedule(
     schedule.cronExpression,
     async () => {
+      if (shouldSkipOffHoursTick(syncType, new Date())) return;
       try {
         await jobHandlers[syncType]();
         await prisma.syncSchedule.update({ where: { syncType }, data: { lastRunAt: new Date() } });
