@@ -104,7 +104,10 @@ export async function listPurchaseAliases(brand: string): Promise<Map<string, st
  * that came from a CATEGORY expansion just as well as one backed by a ClassAItem.
  */
 export async function suggestPurchaseAliases(brand: string, itemName: string, limit = 8): Promise<string[]> {
-  return suggestNames(itemName, await listPurchaseItemNames(brand), limit);
+  // The item's own name is excluded: an exact match already counts without an alias, so
+  // offering it (it would rank first) could only ever double the PO figure.
+  const pool = (await listPurchaseItemNames(brand)).filter((n) => n.toLowerCase() !== itemName.toLowerCase());
+  return suggestNames(itemName, pool, limit);
 }
 
 export async function setPurchaseAliases(brand: string, itemName: string, aliases: string[]) {
@@ -113,6 +116,8 @@ export async function setPurchaseAliases(brand: string, itemName: string, aliase
 
   const resolved: string[] = [];
   for (const alias of aliases) {
+    // Aliasing an item to its own name is a no-op that used to double the PO figure.
+    if (alias.trim().toLowerCase() === itemName.toLowerCase()) continue;
     // Store the real PO spelling, and reject anything never purchased — an alias matching
     // nothing would silently keep the PO column at zero, the very bug this exists to fix.
     const match = byLower.get(alias.trim().toLowerCase());

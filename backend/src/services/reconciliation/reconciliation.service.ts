@@ -67,8 +67,16 @@ function resolvePoByIngredient(
 ): Map<string, number> {
   const resolved = new Map<string, number>();
   for (const itemName of itemNames) {
-    let total = poByItem.get(itemName) ?? 0;
-    for (const alias of aliases.get(itemName) ?? []) total += poByItem.get(alias) ?? 0;
+    // Sum over the *set* of contributing names, not the base plus every alias: an item
+    // aliased to its own name (or listing the same alias twice) would otherwise have that
+    // quantity counted once per mention, silently doubling the PO column.
+    const names = new Map<string, string>([[itemName.toLowerCase(), itemName]]);
+    for (const alias of aliases.get(itemName) ?? []) {
+      if (!names.has(alias.toLowerCase())) names.set(alias.toLowerCase(), alias);
+    }
+
+    let total = 0;
+    for (const name of names.values()) total += poByItem.get(name) ?? 0;
     if (total !== 0) resolved.set(itemName, total);
   }
   return resolved;
