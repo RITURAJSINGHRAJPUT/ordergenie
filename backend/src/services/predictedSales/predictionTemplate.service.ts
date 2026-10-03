@@ -45,10 +45,23 @@ function daysInMonth(month: string): string[] {
   return days;
 }
 
+/** Excel rejects a sheet name over 31 characters, and two sheets can't share a name. */
+function uniqueSheetName(base: string, taken: Set<string>): string {
+  const trimmed = base.slice(0, 31);
+  let name = trimmed;
+  let suffix = 2;
+  while (taken.has(name)) name = `${trimmed.slice(0, 28)} ${suffix++}`;
+  taken.add(name);
+  return name;
+}
+
 /**
- * A flat Outlet | Item | Date | Qty sheet, pre-filled with every row that matters for the
- * month and Qty left blank. Flat rather than a grid so a month of figures can be pasted in
- * one block from whatever produced them.
+ * One sheet per outlet, items down the rows and a column per day — the same shape the
+ * forecasting tool produces, so a downloaded template and a generated file import by the
+ * identical path. Qty cells are left empty: blank means "no forecast" and is skipped, which
+ * is deliberately not the same as a 0.
+ *
+ * Only outlets whose brand has Class A Items get a sheet; the rest have nothing to forecast.
  */
 export async function buildPredictionTemplate(month: string): Promise<{ buffer: Buffer; rows: number }> {
   const days = daysInMonth(month);
@@ -63,23 +76,28 @@ export async function buildPredictionTemplate(month: string): Promise<{ buffer: 
   for (const brand of brands) itemsByBrand.set(brand, await forecastItemsForBrand(brand));
 
   const workbook = new Workbook();
-  const sheet = workbook.addWorksheet('Predictions');
-  sheet.columns = [
-    { header: 'Outlet', key: 'outlet', width: 24 },
-    { header: 'Item', key: 'item', width: 30 },
-    { header: 'Date', key: 'date', width: 14 },
-    { header: 'Qty', key: 'qty', width: 10 },
-  ];
-  sheet.getRow(1).font = { bold: true };
-  sheet.views = [{ state: 'frozen', ySplit: 1 }];
-
+  const takenNames = new Set<string>();
   let rows = 0;
+
   for (const outlet of outlets) {
-    for (const item of itemsByBrand.get(outlet.brand) ?? []) {
-      for (const date of days) {
-        sheet.addRow({ outlet: outlet.name, item, date, qty: null });
-        rows += 1;
-      }
+    const items = itemsByBrand.get(outlet.brand) ?? [];
+    if (items.length === 0) continue;
+
+    const sheet = workbook.addWorksheet(uniqueSheetName(`Prediction - ${outlet.name}`, takenNames));
+    sheet.addRow([`${outlet.name} — Sales Forecast (${month})`]).font = { bold: true };
+    sheet.addRow([]);
+
+    // Row 3 is the header, matching the forecasting tool's layout exactly.
+    const header = sheet.addRow(['Category', 'Item', ...days]);
+    header.font = { bold: true };
+    sheet.getColumn(1).width = 18;
+    sheet.getColumn(2).width = 32;
+    for (let i = 0; i < days.length; i++) sheet.getColumn(3 + i).width = 11;
+    sheet.views = [{ state: 'frozen', xSplit: 2, ySplit: 3 }];
+
+    for (const item of items) {
+      sheet.addRow(['', item]);
+      rows += days.length;
     }
   }
 
@@ -88,8 +106,10 @@ export async function buildPredictionTemplate(month: string): Promise<{ buffer: 
   for (const line of [
     `Sales AI prediction template for ${month}.`,
     '',
-    'Fill in the Qty column only — leave Outlet, Item and Date exactly as generated.',
-    'A blank Qty means "no forecast" and is skipped on import. It is NOT the same as 0:',
+    'One sheet per outlet. Fill in the day cells only — leave the Item column exactly as generated.',
+    'The Category column is optional and ignored on import; it is there to match the forecast tool\'s layout.',
+    '',
+    'A blank cell means "no forecast" and is skipped on import. It is NOT the same as 0:',
     'entering 0 tells reconciliation you predict zero sales, which suppresses the 7-day-average fallback.',
     '',
     'Only items reconciliation actually uses are listed. Anything else would be imported and never read.',

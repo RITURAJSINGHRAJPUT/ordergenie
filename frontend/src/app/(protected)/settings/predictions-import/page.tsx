@@ -55,9 +55,11 @@ export default function PredictionsImportPage() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Upload a monthly sales-forecast workbook (e.g. <code className="text-xs">Aug_2026_Final_Prediction_v14.xlsx</code>)
-        to power the &quot;Sales (AI)&quot; predictions used in reconciliation and the Predictions tabs. Re-uploading the
-        same or a later file safely refreshes existing rows rather than duplicating them.
+        Upload a monthly sales-forecast workbook (e.g.{' '}
+        <code className="text-xs">Order_geni_Sales_Ai_Oct2026_with_Predictions.xlsx</code>) to power the &quot;Sales
+        (AI)&quot; predictions used in reconciliation and the Predictions tabs. The per-outlet grid the forecasting tool
+        produces, the template below and older forecast workbooks are all accepted. Re-uploading the same or a later
+        file safely refreshes existing rows rather than duplicating them.
       </p>
 
       <Card>
@@ -132,8 +134,8 @@ export default function PredictionsImportPage() {
               {templateMutation.isPending ? 'Preparing…' : 'Download template'}
             </Button>
             <p className="text-xs text-muted-foreground sm:ml-2 sm:max-w-md">
-              A blank <strong>Outlet | Item | Date | Qty</strong> sheet listing only the items reconciliation reads. Fill
-              the Qty column and upload it back — leave a cell blank to keep the 7-day-average fallback.
+              One sheet per outlet, items down the rows and a column per day, listing only the items reconciliation
+              reads. Fill the day cells and upload it back — leave a cell blank to keep the 7-day-average fallback.
             </p>
           </div>
 
