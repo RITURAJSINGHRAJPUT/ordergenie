@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3006",
-    "build": "next build",
+    "build": "next build || (echo 'Build failed - clearing Turbopack cache, retrying once' && rm -rf .next/cache && next build)",
     "start": "next start -p 3006",
     "lint": "eslint"
   },
