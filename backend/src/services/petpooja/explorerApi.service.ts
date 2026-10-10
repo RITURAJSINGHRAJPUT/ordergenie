@@ -28,7 +28,7 @@ export async function fetchOrdersRaw(
   for (let page = 0; page < ORDERS_MAX_PAGES; page++) {
     const response = await petpoojaRequest<PetpoojaOrdersResponse>({
       url: env.PETPOOJA_SALES_BASE_URL,
-      method: 'GET',
+      method: 'POST',
       cookie: credentials.cookie,
       onRequest,
       body: {

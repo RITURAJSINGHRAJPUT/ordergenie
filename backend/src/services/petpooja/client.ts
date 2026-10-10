@@ -13,9 +13,9 @@ export interface PetpoojaRequestOptions {
 }
 
 /**
- * Petpooja's Sales/Orders API expects a JSON body on a GET request (per their
- * own curl examples) — axios allows this even though it's non-standard;
- * native fetch would reject it outright.
+ * Every endpoint takes its parameters as a JSON body. Petpooja's own curl examples use GET
+ * for the Orders API, but their edge started rejecting GET-with-body with a 403 on
+ * 2026-10-07; POST carries the identical body and is accepted, so all callers use POST.
  */
 export async function petpoojaRequest<T>(opts: PetpoojaRequestOptions): Promise<T> {
   opts.onRequest?.();

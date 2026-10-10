@@ -34,7 +34,7 @@ export async function fetchOrdersForDate(
   for (let page = 0; page < MAX_PAGES; page++) {
     const response = await petpoojaRequest<PetpoojaOrdersResponse>({
       url: env.PETPOOJA_SALES_BASE_URL,
-      method: 'GET',
+      method: 'POST',
       cookie: credentials.cookie,
       onRequest,
       body: {
