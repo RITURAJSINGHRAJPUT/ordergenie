@@ -102,7 +102,7 @@ export function SalesApiTab({ brand }: { brand: string }) {
       />
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <CardHeader className="flex flex-wrap items-center justify-between gap-2 space-y-0">
           <CardTitle className="text-sm">
             Outlets ({selectedOutletIds.length}/{brandOutlets.length})
           </CardTitle>
@@ -124,7 +124,7 @@ export function SalesApiTab({ brand }: { brand: string }) {
                   checked={selectedOutletIds.includes(o.id)}
                   onCheckedChange={(c) => toggleOutlet(o.id, c === true)}
                 />
-                <Label htmlFor={`sales-api-outlet-${o.id}`} className="text-sm font-normal">
+                <Label htmlFor={`sales-api-outlet-${o.id}`} className="flex-1 py-1.5 text-sm font-normal md:py-0">
                   {o.name}
                 </Label>
               </div>

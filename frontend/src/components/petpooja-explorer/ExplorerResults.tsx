@@ -41,6 +41,7 @@ export function ExplorerResults({
   const { meta, setPage } = usePagedList(records, 12);
   const start = (meta.page - 1) * meta.pageSize;
   const pageRecords = records.slice(start, start + meta.pageSize);
+  const erroredOutlets = result.perOutlet.filter((o) => o.error);
 
   return (
     <div className="space-y-4">
@@ -52,16 +53,28 @@ export function ExplorerResults({
         <StatCard label="Total value" value={formatCurrency(result.totalValue)} />
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {result.perOutlet.map((o) => (
-          <Badge key={o.outletId} variant={o.error ? 'destructive' : o.count > 0 ? 'secondary' : 'outline'} title={o.error}>
-            {o.outletName}: {o.error ? 'error' : o.count}
-          </Badge>
-        ))}
+      <div className="space-y-2">
+        <div className="flex flex-wrap gap-2">
+          {result.perOutlet.map((o) => (
+            <Badge key={o.outletId} variant={o.error ? 'destructive' : o.count > 0 ? 'secondary' : 'outline'} title={o.error}>
+              {o.outletName}: {o.error ? 'error' : o.count}
+            </Badge>
+          ))}
+        </div>
+        {/* Each badge's error is a hover tooltip, so phones and touch screens get them listed inline. */}
+        {erroredOutlets.length > 0 && (
+          <ul className="space-y-1 text-xs text-destructive md:hidden pointer-coarse:block">
+            {erroredOutlets.map((o) => (
+              <li key={o.outletId} className="break-words">
+                <span className="font-medium">{o.outletName}:</span> {o.error}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <CardHeader className="flex flex-wrap items-center justify-between gap-2 space-y-0">
           <CardTitle className="text-sm">Records</CardTitle>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={onExportCsv} disabled={result.records.length === 0}>
@@ -140,7 +153,12 @@ export function ExplorerResults({
                       {(pageRecords as ExplorerTransferRecord[]).map((r, localI) => (
                         <TableRow key={start + localI}>
                           <TableCell>{r.outletName}</TableCell>
-                          <TableCell className="font-mono text-xs">{JSON.stringify(r.raw)}</TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {/* Cells default to nowrap, which would stretch this one-line JSON into a
+                                table many screens wide. The cap sits on a div because max-width
+                                on a <td> isn't reliably honoured. */}
+                            <div className="min-w-[12rem] max-w-[24rem] whitespace-pre-wrap break-all">{JSON.stringify(r.raw)}</div>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -159,9 +177,9 @@ export function ExplorerResults({
 export function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <Card>
-      <CardContent className="p-4">
+      <CardContent className="p-3 sm:p-4">
         <div className="text-xs font-medium uppercase text-muted-foreground">{label}</div>
-        <div className="mt-1 text-xl font-semibold">{value}</div>
+        <div className="mt-1 min-w-0 text-lg font-semibold tabular-nums break-words sm:text-xl">{value}</div>
       </CardContent>
     </Card>
   );

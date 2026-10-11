@@ -39,7 +39,7 @@ export function WebhookDeliveryLogTab() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Every inbound call to <code className="text-xs">/api/webhooks/petpooja/purchase-order</code>, success or
+        Every inbound call to <code className="break-words text-xs">/api/webhooks/petpooja/purchase-order</code>, success or
         rejected, in the order it was received — including deliveries that never made it into a Purchase Order row
         (unresolved outlet, malformed payload, bad credentials). Use this to tell apart &quot;Petpooja never sent
         it&quot; from &quot;we rejected it&quot;.
@@ -49,15 +49,15 @@ export function WebhookDeliveryLogTab() {
         <div className="flex flex-wrap items-end gap-3">
           <DateRangeFilter />
         </div>
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="flex w-full flex-wrap items-end gap-3 sm:w-auto">
           <Input
             placeholder="Search PO number / Petpooja ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-[220px]"
+            className="w-full sm:w-[220px]"
           />
           <Select value={outletId} onValueChange={(v) => setOutletId(v ?? 'all')}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder="Outlet" />
             </SelectTrigger>
             <SelectContent>
@@ -71,7 +71,7 @@ export function WebhookDeliveryLogTab() {
             </SelectContent>
           </Select>
           <Select value={outcome} onValueChange={(v) => setOutcome(v ?? 'all')}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-full sm:w-[160px]">
               <SelectValue placeholder="Outcome" />
             </SelectTrigger>
             <SelectContent>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -51,17 +51,27 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
   }, [user, pathname, router]);
 
   const allowedTabs = allowedSettingsTabsFor(user ?? undefined);
+  const tabStripRef = useRef<HTMLDivElement>(null);
+
+  // The strip scrolls sideways on narrow screens with its scrollbar hidden, so a deep link to a
+  // later tab would otherwise open with the selected tab out of sight.
+  useEffect(() => {
+    tabStripRef.current
+      ?.querySelector('[aria-current="page"]')
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [pathname, user]);
 
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">Settings</h1>
-      <div className="flex gap-1 overflow-x-auto border-b">
+      <div ref={tabStripRef} className="flex gap-1 overflow-x-auto scrollbar-none border-b">
         {TABS.filter((tab) => allowedTabs.includes(tab.href)).map((tab) => (
           <Link
             key={tab.href}
             href={tab.href}
+            aria-current={pathname === tab.href ? 'page' : undefined}
             className={cn(
-              'whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors',
+              'whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors pointer-coarse:py-2.5',
               pathname === tab.href
                 ? 'border-primary text-foreground'
                 : 'border-transparent text-muted-foreground hover:text-foreground'

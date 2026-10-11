@@ -56,7 +56,7 @@ export default function PredictionsImportPage() {
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
         Upload a monthly sales-forecast workbook (e.g.{' '}
-        <code className="text-xs">Order_geni_Sales_Ai_Oct2026_with_Predictions.xlsx</code>) to power the &quot;Sales
+        <code className="break-words text-xs">Order_geni_Sales_Ai_Oct2026_with_Predictions.xlsx</code>) to power the &quot;Sales
         (AI)&quot; predictions used in reconciliation and the Predictions tabs. The per-outlet grid the forecasting tool
         produces, the template below and older forecast workbooks are all accepted. Re-uploading the same or a later
         file safely refreshes existing rows rather than duplicating them.
@@ -84,9 +84,11 @@ export default function PredictionsImportPage() {
                   {summary.maxStockDate ? formatDate(summary.maxStockDate) : '—'}
                 </div>
               </div>
-              <div className="col-span-2">
+              {/* min-w-0 lets the grid track shrink below a long filename so it wraps instead
+                  of stretching the card. */}
+              <div className="col-span-2 min-w-0">
                 <div className="text-muted-foreground">Source File(s)</div>
-                <div className="font-medium">{summary.sources.join(', ') || '—'}</div>
+                <div className="break-words font-medium">{summary.sources.join(', ') || '—'}</div>
               </div>
             </div>
           )}
@@ -104,7 +106,7 @@ export default function PredictionsImportPage() {
               type="file"
               accept=".xlsx"
               onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
-              className="flex h-9 w-full max-w-sm rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
+              className="flex h-9 w-full max-w-sm rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm file:border-0 file:bg-transparent file:text-sm file:font-medium md:text-sm pointer-coarse:h-10"
             />
             <Button disabled={!selectedFile || importMutation.isPending} onClick={handleUpload}>
               <UploadCloud className="mr-1 h-4 w-4" />
@@ -113,7 +115,7 @@ export default function PredictionsImportPage() {
           </div>
 
           <div className="flex flex-wrap items-end gap-2 rounded-md border p-3">
-            <div className="space-y-1">
+            <div className="w-full space-y-1 sm:w-auto">
               <Label htmlFor="template-month" className="text-xs text-muted-foreground">
                 Template month
               </Label>
@@ -122,7 +124,7 @@ export default function PredictionsImportPage() {
                 type="month"
                 value={templateMonth}
                 onChange={(e) => setTemplateMonth(e.target.value)}
-                className="h-9 w-[170px]"
+                className="h-9 w-full sm:w-[170px]"
               />
             </div>
             <Button
@@ -147,7 +149,7 @@ export default function PredictionsImportPage() {
                   {lastResult.rowsCreated} created, {lastResult.rowsUpdated} updated across {lastResult.sheetsProcessed} sheet(s)
                 </span>
               </div>
-              {lastResult.errorMessage && <p className="mt-2 text-destructive">{lastResult.errorMessage}</p>}
+              {lastResult.errorMessage && <p className="mt-2 break-words text-destructive">{lastResult.errorMessage}</p>}
               {lastResult.sheetsSkipped.length > 0 && (
                 <ul className="mt-2 list-disc pl-5 text-muted-foreground">
                   {lastResult.sheetsSkipped.map((s) => (
@@ -195,6 +197,12 @@ export default function PredictionsImportPage() {
                           <Badge variant={STATUS_VARIANT[l.status]} title={l.errorMessage ?? undefined}>
                             {l.status}
                           </Badge>
+                          {/* The title tooltip needs hover, so phones and touch screens get the error inline. */}
+                          {l.errorMessage && (
+                            <p className="mt-1 max-w-[16rem] whitespace-normal break-words text-xs text-destructive md:hidden pointer-coarse:block">
+                              {l.errorMessage}
+                            </p>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">{l.rowsCreated}</TableCell>
                         <TableCell className="text-right">{l.rowsUpdated}</TableCell>
@@ -205,7 +213,7 @@ export default function PredictionsImportPage() {
                         <TableCell>{l.triggeredByName ?? '—'}</TableCell>
                         <TableCell>
                           <button
-                            className="text-xs font-medium text-destructive hover:underline"
+                            className="py-1.5 text-xs font-medium text-destructive hover:underline md:py-0.5"
                             onClick={() => setDeleting(l)}
                           >
                             Delete

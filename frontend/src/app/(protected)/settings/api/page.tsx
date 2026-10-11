@@ -44,7 +44,7 @@ export default function ApiConfigPage() {
         {data.map((cfg) => (
           <Card key={cfg.id}>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <CardTitle className="text-base">{API_LABELS[cfg.apiType].label}</CardTitle>
                 <Badge variant={cfg.isConfigured ? 'secondary' : 'outline'}>
                   {cfg.isConfigured ? 'Configured' : 'Not Configured'}

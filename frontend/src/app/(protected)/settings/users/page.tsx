@@ -88,12 +88,12 @@ export default function UsersPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <button className="text-xs font-medium text-primary hover:underline" onClick={() => setEditing(u)}>
+                          <button className="py-1.5 text-xs font-medium text-primary hover:underline md:py-0.5" onClick={() => setEditing(u)}>
                             Edit
                           </button>
                           {u.id !== currentUserId && (
                             <button
-                              className="text-xs font-medium text-destructive hover:underline"
+                              className="py-1.5 text-xs font-medium text-destructive hover:underline md:py-0.5"
                               onClick={() => setDeleting(u)}
                             >
                               Delete
@@ -160,7 +160,7 @@ function CreateUserDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && (onClose(), reset())}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add User</DialogTitle>
         </DialogHeader>
@@ -231,7 +231,7 @@ function CreateUserDialog({
             </Select>
           </div>
           {isSuperAdmin && (
-            <div className="flex items-center justify-between rounded-md border px-3 py-2">
+            <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
               <div>
                 <Label>Sales Forecast access</Label>
                 <p className="text-xs text-muted-foreground">Opens that one Settings tab, nothing else.</p>
@@ -322,7 +322,7 @@ function EditUserDialog({
         }
       }}
     >
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edit {user?.name}</DialogTitle>
         </DialogHeader>
@@ -385,7 +385,7 @@ function EditUserDialog({
             </Select>
           </div>
           {isSuperAdmin && (
-            <div className="flex items-center justify-between rounded-md border px-3 py-2">
+            <div className="flex items-center justify-between gap-3 rounded-md border px-3 py-2">
               <div>
                 <Label>Sales Forecast access</Label>
                 <p className="text-xs text-muted-foreground">Opens that one Settings tab, nothing else.</p>

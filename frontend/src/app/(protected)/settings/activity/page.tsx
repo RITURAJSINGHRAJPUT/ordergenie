@@ -86,16 +86,17 @@ export default function ActivityLogPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1">
+          {/* Two-up dates and full-width pickers on phones; from sm up it's the original wrapping row. */}
+          <div className="grid grid-cols-2 items-end gap-3 sm:flex sm:flex-wrap">
+            <div className="min-w-0 space-y-1">
               <Label htmlFor="activity-from">From</Label>
-              <Input id="activity-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-[150px]" />
+              <Input id="activity-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-full sm:w-[150px]" />
             </div>
-            <div className="space-y-1">
+            <div className="min-w-0 space-y-1">
               <Label htmlFor="activity-to">To</Label>
-              <Input id="activity-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-[150px]" />
+              <Input id="activity-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-full sm:w-[150px]" />
             </div>
-            <div className="space-y-1">
+            <div className="col-span-2 space-y-1">
               <Label htmlFor="activity-area">Area</Label>
               <Select
                 value={area}
@@ -106,7 +107,7 @@ export default function ActivityLogPage() {
                   setAction('all');
                 }}
               >
-                <SelectTrigger id="activity-area" className="w-[180px]">
+                <SelectTrigger id="activity-area" className="w-full sm:w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -118,10 +119,10 @@ export default function ActivityLogPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
+            <div className="col-span-2 space-y-1">
               <Label htmlFor="activity-user">User</Label>
               <Select value={userId} onValueChange={(v) => setUserId(v ?? 'all')}>
-                <SelectTrigger id="activity-user" className="w-[190px]">
+                <SelectTrigger id="activity-user" className="w-full sm:w-[190px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -134,10 +135,10 @@ export default function ActivityLogPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
+            <div className="col-span-2 space-y-1">
               <Label htmlFor="activity-action">Action</Label>
               <Select value={action} onValueChange={(v) => setAction(v ?? 'all')}>
-                <SelectTrigger id="activity-action" className="w-[220px]">
+                <SelectTrigger id="activity-action" className="w-full sm:w-[220px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -150,10 +151,10 @@ export default function ActivityLogPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
+            <div className="col-span-2 space-y-1">
               <Label htmlFor="activity-outlet">Outlet</Label>
               <Select value={outletId} onValueChange={(v) => setOutletId(v ?? 'all')}>
-                <SelectTrigger id="activity-outlet" className="w-[190px]">
+                <SelectTrigger id="activity-outlet" className="w-full sm:w-[190px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -166,7 +167,7 @@ export default function ActivityLogPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1">
+            <div className="col-span-2 space-y-1">
               <Label htmlFor="activity-search">Search</Label>
               <Input
                 id="activity-search"
@@ -174,10 +175,10 @@ export default function ActivityLogPage() {
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && setSearch(searchInput.trim())}
                 placeholder="Item, email or URL"
-                className="w-[200px]"
+                className="w-full sm:w-[200px]"
               />
             </div>
-            <Button variant="outline" onClick={() => setSearch(searchInput.trim())}>
+            <Button variant="outline" className="col-span-2" onClick={() => setSearch(searchInput.trim())}>
               Apply
             </Button>
           </div>
@@ -228,7 +229,13 @@ function ActivityRow({ row }: { row: ActivityLogRow }) {
     <>
       <TableRow>
         <TableCell className="pr-0">
-          <button type="button" onClick={() => setOpen((v) => !v)} aria-label="Show request details">
+          {/* Negative margin grows the tap target without shifting the row layout. */}
+          <button
+            type="button"
+            className="-m-2 p-2"
+            onClick={() => setOpen((v) => !v)}
+            aria-label="Show request details"
+          >
             {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
         </TableCell>

@@ -62,7 +62,7 @@ export default function SyncSchedulePage() {
                   <TableCell className="font-medium">{s.syncType}</TableCell>
                   <TableCell>
                     <Input
-                      className="w-[160px] font-mono text-xs"
+                      className="w-[160px] font-mono text-base md:text-xs"
                       value={drafts[s.syncType] ?? s.cronExpression}
                       onChange={(e) => setDrafts((d) => ({ ...d, [s.syncType]: e.target.value }))}
                     />
@@ -76,23 +76,27 @@ export default function SyncSchedulePage() {
                       onCheckedChange={(checked) => update.mutate({ syncType: s.syncType, isEnabled: checked })}
                     />
                   </TableCell>
-                  <TableCell className="flex items-center gap-3">
-                    <button
-                      className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
-                      disabled={!drafts[s.syncType] || drafts[s.syncType] === s.cronExpression}
-                      onClick={() => update.mutate({ syncType: s.syncType, cronExpression: drafts[s.syncType] })}
-                    >
-                      Save
-                    </button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={triggerSync.isPending}
-                      onClick={() => triggerSync.mutate(s.syncType)}
-                    >
-                      <PlayCircle className="mr-1 h-3.5 w-3.5" />
-                      Run Now
-                    </Button>
+                  <TableCell>
+                    {/* Flex lives on an inner div: a flex <td> stops being a table cell and
+                        breaks the row's column alignment. */}
+                    <div className="flex items-center gap-3">
+                      <button
+                        className="py-1.5 text-xs font-medium text-primary hover:underline disabled:opacity-50 md:py-0.5"
+                        disabled={!drafts[s.syncType] || drafts[s.syncType] === s.cronExpression}
+                        onClick={() => update.mutate({ syncType: s.syncType, cronExpression: drafts[s.syncType] })}
+                      >
+                        Save
+                      </button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={triggerSync.isPending}
+                        onClick={() => triggerSync.mutate(s.syncType)}
+                      >
+                        <PlayCircle className="mr-1 h-3.5 w-3.5" />
+                        Run Now
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -129,6 +133,12 @@ export default function SyncSchedulePage() {
                     <Badge variant={STATUS_VARIANT[l.status]} title={l.errorMessage ?? undefined}>
                       {l.status}
                     </Badge>
+                    {/* The title tooltip needs hover, so phones and touch screens get the error inline. */}
+                    {l.errorMessage && (
+                      <p className="mt-1 max-w-[16rem] whitespace-normal break-words text-xs text-destructive md:hidden pointer-coarse:block">
+                        {l.errorMessage}
+                      </p>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">{l.recordsFetched}</TableCell>
                   <TableCell className="text-right">{l.recordsCreated}</TableCell>

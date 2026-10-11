@@ -55,7 +55,7 @@ export function ReceivedPurchaseOrdersTab() {
           <>
             <strong>{status === 'PENDING' ? 'Pending' : 'Cancelled'}</strong> purchase orders come from the inbound
             Purchase Order webhook (API 8) — Petpooja pushes these to{' '}
-            <code className="text-xs">/api/webhooks/petpooja/purchase-order</code> the moment a PO is saved on
+            <code className="break-words text-xs">/api/webhooks/petpooja/purchase-order</code> the moment a PO is saved on
             their end, before anything has actually been received.
           </>
         ) : (
@@ -74,15 +74,15 @@ export function ReceivedPurchaseOrdersTab() {
         <div className="flex flex-wrap items-end gap-3">
           <DateRangeFilter />
         </div>
-        <div className="flex items-end gap-3">
+        <div className="flex w-full flex-wrap items-end gap-3 sm:w-auto">
           <Input
             placeholder="Search PO number..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-[180px]"
+            className="w-full sm:w-[180px]"
           />
           <Select value={outletId} onValueChange={(v) => setOutletId(v ?? 'all')}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder="Outlet" />
             </SelectTrigger>
             <SelectContent>
@@ -95,7 +95,7 @@ export function ReceivedPurchaseOrdersTab() {
             </SelectContent>
           </Select>
           <Select value={status} onValueChange={(v) => setStatus(v ?? 'all')}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>

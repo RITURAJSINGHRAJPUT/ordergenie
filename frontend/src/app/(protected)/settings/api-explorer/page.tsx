@@ -174,6 +174,7 @@ export default function ApiExplorerPage() {
                   />
                   <Button
                     size="lg"
+                    className="w-full sm:w-auto"
                     disabled={selectedOutletIds.length === 0 || explorer.isPending}
                     onClick={handleFetch}
                     variant={dirty ? 'default' : 'outline'}
@@ -184,7 +185,7 @@ export default function ApiExplorerPage() {
                 </div>
 
                 <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <CardHeader className="flex flex-wrap items-center justify-between gap-2 space-y-0">
                     <CardTitle className="text-sm">
                       Outlets ({selectedOutletIds.length}/{outletsForTab.length})
                     </CardTitle>
@@ -206,7 +207,7 @@ export default function ApiExplorerPage() {
                             checked={selectedOutletIds.includes(o.id)}
                             onCheckedChange={(c) => toggleOutlet(o.id, c === true)}
                           />
-                          <Label htmlFor={`outlet-${o.id}`} className="text-sm font-normal">
+                          <Label htmlFor={`outlet-${o.id}`} className="flex-1 py-1.5 text-sm font-normal md:py-0">
                             {o.name}
                           </Label>
                         </div>

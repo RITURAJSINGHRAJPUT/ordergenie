@@ -20,7 +20,9 @@ export function WebhookLogDetailDialog({ id, onClose }: { id: string | null; onC
           <Skeleton className="h-64 w-full" />
         ) : (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+            {/* min-w-0 children + break-words keep a long ID or reason wrapping inside its
+                column instead of pushing the grid wider than the dialog. */}
+            <div className="grid grid-cols-2 gap-3 text-sm break-words *:min-w-0 sm:grid-cols-3">
               <div>
                 <div className="text-muted-foreground">Received At</div>
                 <div className="font-medium">
@@ -65,7 +67,7 @@ export function WebhookLogDetailDialog({ id, onClose }: { id: string | null; onC
                   retention cleanup and no longer exists.
                 </p>
               ) : (
-                <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+                <div className="grid grid-cols-2 gap-3 text-sm break-words *:min-w-0 sm:grid-cols-3">
                   <div>
                     <div className="text-muted-foreground">PO #</div>
                     <div className="font-medium">{data.currentPurchaseOrder.poNumber}</div>
