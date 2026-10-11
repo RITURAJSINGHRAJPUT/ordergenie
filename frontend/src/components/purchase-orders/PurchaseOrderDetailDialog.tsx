@@ -25,7 +25,7 @@ export function PurchaseOrderDetailDialog({
 
   return (
     <Dialog open={Boolean(id)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[85vh] sm:max-w-3xl overflow-y-auto">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <div className="flex items-center justify-between gap-3 pr-6">
             <DialogTitle>{data?.poNumber ?? 'Purchase Order'}</DialogTitle>

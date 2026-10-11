@@ -15,7 +15,15 @@ function isLinkActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(href + '/');
 }
 
-export function Sidebar({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
+export function Sidebar({
+  onNavigate,
+  collapsed = false,
+  showCollapseToggle = true,
+}: {
+  onNavigate?: () => void;
+  collapsed?: boolean;
+  showCollapseToggle?: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { logout } = useAuthStore();
@@ -59,14 +67,16 @@ export function Sidebar({ onNavigate, collapsed = false }: { onNavigate?: () => 
             <span className="text-lg font-semibold tracking-tight">OrderGenie</span>
           </span>
         )}
-        <button
-          type="button"
-          onClick={toggleCollapsed}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          {collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-        </button>
+        {showCollapseToggle && (
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            {collapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+          </button>
+        )}
       </div>
       <nav className={cn('flex-1 min-h-0 overflow-y-auto space-y-1', collapsed ? 'px-2' : 'px-3')}>
         {items.map((item) => {
@@ -80,7 +90,7 @@ export function Sidebar({ onNavigate, collapsed = false }: { onNavigate?: () => 
                   type="button"
                   title={item.label}
                   onClick={() => openSectionAndExpand(item)}
-                  className="flex w-full items-center justify-center rounded-md px-3 py-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  className="flex w-full items-center justify-center rounded-md px-3 py-2 pointer-coarse:py-2.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   <SectionIcon className="h-4 w-4" />
                 </button>
@@ -94,7 +104,7 @@ export function Sidebar({ onNavigate, collapsed = false }: { onNavigate?: () => 
                 <button
                   type="button"
                   onClick={() => toggleSection(item)}
-                  className="flex w-full items-center justify-between rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  className="flex w-full items-center justify-between rounded-md px-3 py-2 pointer-coarse:py-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
                   {item.label}
                   <ChevronDown className={cn('h-4 w-4 transition-transform', !open && '-rotate-90')} />
@@ -110,7 +120,7 @@ export function Sidebar({ onNavigate, collapsed = false }: { onNavigate?: () => 
                           href={child.href ?? '#'}
                           onClick={onNavigate}
                           className={cn(
-                            'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                            'flex items-center gap-3 rounded-md px-3 py-2 pointer-coarse:py-2.5 text-sm font-medium transition-colors',
                             active
                               ? 'bg-primary text-primary-foreground'
                               : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -136,7 +146,7 @@ export function Sidebar({ onNavigate, collapsed = false }: { onNavigate?: () => 
               onClick={onNavigate}
               title={collapsed ? item.label : undefined}
               className={cn(
-                'flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                'flex items-center rounded-md px-3 py-2 pointer-coarse:py-2.5 text-sm font-medium transition-colors',
                 collapsed ? 'justify-center' : 'gap-3',
                 active
                   ? 'bg-primary text-primary-foreground'
@@ -154,7 +164,7 @@ export function Sidebar({ onNavigate, collapsed = false }: { onNavigate?: () => 
           onClick={handleLogout}
           title={collapsed ? 'Logout' : undefined}
           className={cn(
-            'flex w-full items-center rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+            'flex w-full items-center rounded-md px-3 py-2 pointer-coarse:py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
             collapsed ? 'justify-center' : 'gap-3'
           )}
         >

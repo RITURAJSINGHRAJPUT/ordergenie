@@ -8,7 +8,7 @@ export function DateRangeFilter({ extra }: { extra?: ReactNode }) {
   const { customFrom, customTo, setCustomRange } = useFilterStore();
 
   return (
-    <div className="flex flex-wrap items-end gap-3">
+    <div className="flex flex-wrap items-end gap-2 sm:gap-3">
       <DateRangePicker from={customFrom ?? ''} to={customTo ?? ''} onChange={setCustomRange} />
       {extra}
     </div>

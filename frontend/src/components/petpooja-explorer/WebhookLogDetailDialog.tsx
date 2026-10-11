@@ -11,7 +11,7 @@ export function WebhookLogDetailDialog({ id, onClose }: { id: string | null; onC
 
   return (
     <Dialog open={Boolean(id)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[85vh] sm:max-w-3xl overflow-y-auto">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{data?.poNumber ?? 'Webhook Delivery'}</DialogTitle>
         </DialogHeader>

@@ -53,7 +53,7 @@ export function AlertsBell() {
         )}
       </PopoverTrigger>
 
-      <PopoverContent align="end" className="w-80 p-0">
+      <PopoverContent align="end" className="w-[min(20rem,calc(100vw-1.5rem))] p-0">
         <div className="border-b px-3 py-2">
           <p className="text-sm font-medium">Closing not entered</p>
           <p className="text-xs text-muted-foreground">

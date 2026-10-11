@@ -13,9 +13,10 @@ export function Pagination({
   if (!meta) return null;
 
   return (
-    <div className="flex items-center justify-between px-1 py-3 text-sm text-muted-foreground">
+    <div className="flex flex-wrap items-center justify-between gap-2 px-1 py-3 text-sm text-muted-foreground">
       <span>
-        Page {meta.page} of {meta.totalPages} &middot; {meta.total.toLocaleString('en-IN')} records
+        Page {meta.page} of {meta.totalPages}
+        <span className="hidden sm:inline"> &middot; {meta.total.toLocaleString('en-IN')} records</span>
       </span>
       <div className="flex gap-2">
         <Button variant="outline" size="sm" disabled={meta.page <= 1} onClick={() => onPageChange(meta.page - 1)}>

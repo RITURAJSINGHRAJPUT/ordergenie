@@ -11,7 +11,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const collapsed = isCollapsed && isHydrated;
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    // h-dvh rather than h-screen: 100vh on mobile Safari includes the collapsing address bar.
+    // The horizontal safe-area padding keeps content clear of the notch in landscape.
+    <div className="flex h-dvh overflow-hidden pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
       <aside
         className={cn(
           'hidden shrink-0 border-r bg-background transition-all md:block',
@@ -20,9 +22,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         <Sidebar collapsed={collapsed} />
       </aside>
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-y-auto bg-muted/20 p-4 md:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-muted/20 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:p-4 sm:pb-[calc(1rem+env(safe-area-inset-bottom))] md:p-6 md:pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+          {children}
+        </main>
       </div>
       {/* Covers whichever page outlet staff land on; renders nothing for other roles. */}
       <ClosingReminderOverlay />

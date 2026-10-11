@@ -8,6 +8,7 @@ import { buttonVariants } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 
 function toIso(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -25,6 +26,7 @@ export function DateRangePicker({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const isMobile = useIsMobile();
   // Draft selection, live only while the popover is open. Starting fresh (rather than
   // seeding it with the already-complete committed range) is required so the first click
   // of a new selection begins a new range instead of react-day-picker snapping it to the
@@ -67,7 +69,7 @@ export function DateRangePicker({
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
-        className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'justify-start gap-2 font-normal', className)}
+        className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'w-full justify-start gap-2 font-normal sm:w-auto', className)}
       >
         <CalendarIcon className="h-4 w-4 text-muted-foreground" />
         {label}
@@ -76,7 +78,7 @@ export function DateRangePicker({
         <Calendar
           mode="range"
           min={1}
-          numberOfMonths={2}
+          numberOfMonths={isMobile ? 1 : 2}
           selected={draft}
           defaultMonth={from ? parseISO(from) : undefined}
           onSelect={handleSelect}

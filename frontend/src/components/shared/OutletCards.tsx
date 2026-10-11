@@ -34,7 +34,8 @@ export function OutletCards({ eligibleField, brand, value, onChange }: OutletCar
     .filter((o) => !brand || o.brand === brand);
 
   return (
-    <div className="flex flex-wrap gap-2">
+    // Phones get one swipeable row; a wrapped grid of 150px cards would push the page content far down.
+    <div className="-mx-3 flex snap-x snap-mandatory scroll-px-3 gap-2 overflow-x-auto scrollbar-none px-3 pb-1 sm:mx-0 sm:px-0 md:flex-wrap md:overflow-visible md:pb-0">
       <OutletCard
         label={brand ? `All ${brand} Outlets` : 'All Outlets'}
         sublabel={`${outlets.length} outlets`}
@@ -72,7 +73,7 @@ function OutletCard({
       onClick={onClick}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick()}
       className={cn(
-        'w-[150px] cursor-pointer select-none transition-colors hover:border-primary/50',
+        'w-[150px] shrink-0 snap-start cursor-pointer select-none transition-colors hover:border-primary/50',
         active ? 'border-primary bg-primary/5' : 'border-border'
       )}
     >
