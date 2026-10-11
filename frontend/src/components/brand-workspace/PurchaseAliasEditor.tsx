@@ -49,14 +49,14 @@ export function PurchaseAliasEditor({
         ) : options.length === 0 ? (
           <p className="text-sm text-muted-foreground">No purchase-order items resemble this name.</p>
         ) : (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2 md:gap-1.5">
             {options.map((name) => (
               <button
                 key={name}
                 type="button"
                 onClick={() => toggle(name)}
                 className={cn(
-                  'rounded-full border px-2.5 py-1 text-xs transition-colors',
+                  'rounded-full border px-3 py-2 text-xs transition-colors md:px-2.5 md:py-1',
                   selected.includes(name) ? 'border-primary bg-primary text-primary-foreground' : 'hover:bg-muted'
                 )}
               >

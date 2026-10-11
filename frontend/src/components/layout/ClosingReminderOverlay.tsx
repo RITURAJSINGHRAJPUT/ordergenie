@@ -77,9 +77,11 @@ export function ClosingReminderOverlay() {
     router.push(`/${oldest.brand.toLowerCase()}/reconciliation`);
   }
 
+  // my-auto (not items-center) centers the card but lets it start at the top and scroll when a
+  // long list outgrows a landscape phone; the max() padding keeps it clear of the notch.
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex justify-center overflow-y-auto overscroll-contain bg-black/50 pt-[max(1rem,env(safe-area-inset-top))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1rem,env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))]"
       onClick={() => setVisible(false)}
       role="presentation"
     >
@@ -89,7 +91,7 @@ export function ClosingReminderOverlay() {
           e.stopPropagation();
           openReconciliation();
         }}
-        className="w-full max-w-sm rounded-lg bg-background p-5 text-left shadow-lg ring-1 ring-destructive/30"
+        className="my-auto w-full max-w-sm rounded-lg bg-background p-5 text-left shadow-lg ring-1 ring-destructive/30"
       >
         <div className="flex items-center gap-2 text-destructive">
           <AlertTriangle className="h-5 w-5" />

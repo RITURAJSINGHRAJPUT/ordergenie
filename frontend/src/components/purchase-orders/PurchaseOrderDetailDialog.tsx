@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { MobileCard, MobileCardList, MobileField, MobileFields } from '@/components/shared/MobileCard';
 import { usePurchaseOrderDetail, usePurchaseOrderPdfDownload } from '@/hooks/usePurchaseOrders';
 import { formatCurrency, formatDate, formatNumber } from '@/lib/format';
 import { STATUS_VARIANT } from './status';
@@ -27,7 +28,7 @@ export function PurchaseOrderDetailDialog({
     <Dialog open={Boolean(id)} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <div className="flex items-center justify-between gap-3 pr-6">
+          <div className="flex flex-wrap items-center justify-between gap-3 pr-6">
             <DialogTitle>{data?.poNumber ?? 'Purchase Order'}</DialogTitle>
             {allowPdfDownload && (
               <Button
@@ -47,7 +48,7 @@ export function PurchaseOrderDetailDialog({
           <Skeleton className="h-64 w-full" />
         ) : (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 text-sm break-words sm:grid-cols-3">
               <div>
                 <div className="text-muted-foreground">Outlet</div>
                 <div className="font-medium">{data.outletName}</div>
@@ -74,7 +75,7 @@ export function PurchaseOrderDetailDialog({
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="hidden overflow-x-auto md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -102,8 +103,28 @@ export function PurchaseOrderDetailDialog({
                 </TableBody>
               </Table>
             </div>
+            <MobileCardList>
+              {data.items.map((item, idx) => (
+                <MobileCard
+                  key={idx}
+                  title={item.itemName}
+                  aside={<span className="font-semibold">{formatCurrency(item.amount)}</span>}
+                >
+                  <MobileFields>
+                    <MobileField label="Qty">
+                      {formatNumber(item.quantity)} {item.unit}
+                    </MobileField>
+                    <MobileField label="Rate">{formatCurrency(item.rate)}</MobileField>
+                    <MobileField label="GST">{formatCurrency(item.cgst + item.sgst + item.igst + item.cess)}</MobileField>
+                    <MobileField label="Received / Pending">
+                      {formatNumber(item.receivedQty)} / {formatNumber(item.pendingQty)}
+                    </MobileField>
+                  </MobileFields>
+                </MobileCard>
+              ))}
+            </MobileCardList>
 
-            <div className="flex justify-end gap-6 text-sm">
+            <div className="flex flex-wrap justify-end gap-x-6 gap-y-1 text-sm">
               <div>
                 <span className="text-muted-foreground">Tax: </span>
                 <span className="font-medium">{formatCurrency(data.taxAmount)}</span>

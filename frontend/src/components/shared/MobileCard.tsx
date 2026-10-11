@@ -47,12 +47,14 @@ export function MobileCard({
       })}
     >
       <CardContent className="space-y-3 p-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
+        {/* The aside drops below the title, right-aligned, once the two can't share a line
+            without crushing the title (a long PO number beside "PARTIALLY RECEIVED"). */}
+        <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1.5">
+          <div className="min-w-0 flex-[1_1_10rem]">
             <div className="font-medium leading-snug break-words">{title}</div>
             {subtitle && <div className="mt-0.5 text-xs text-muted-foreground">{subtitle}</div>}
           </div>
-          {aside && <div className="shrink-0 text-right">{aside}</div>}
+          {aside && <div className="ml-auto shrink-0 text-right">{aside}</div>}
         </div>
         {children}
       </CardContent>

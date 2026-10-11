@@ -64,10 +64,10 @@ export function BrandClassAItemsTab({ brand, outletId }: { brand: string; outlet
         <CardContent className="space-y-4">
           {!isViewer && (
             <div className="flex flex-wrap items-end gap-3">
-              <div className="space-y-1">
+              <div className="w-full space-y-1 sm:w-auto">
                 <Label htmlFor="class-a-type">Type</Label>
                 <Select value={type} onValueChange={(v) => { setType((v as ClassAItemType) ?? 'ITEM'); setValue(''); }}>
-                  <SelectTrigger id="class-a-type" className="w-[140px]">
+                  <SelectTrigger id="class-a-type" className="w-full sm:w-[140px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -77,10 +77,10 @@ export function BrandClassAItemsTab({ brand, outletId }: { brand: string; outlet
                 </Select>
               </div>
               {type === 'CATEGORY' ? (
-                <div className="space-y-1">
+                <div className="w-full space-y-1 sm:w-auto">
                   <Label htmlFor="class-a-category">Category</Label>
                   <Select value={value} onValueChange={(v) => setValue(v ?? '')}>
-                    <SelectTrigger id="class-a-category" className="w-[200px]">
+                    <SelectTrigger id="class-a-category" className="w-full sm:w-[200px]">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -93,9 +93,9 @@ export function BrandClassAItemsTab({ brand, outletId }: { brand: string; outlet
                   </Select>
                 </div>
               ) : (
-                <div className="space-y-1">
+                <div className="w-full space-y-1 sm:w-auto">
                   <Label htmlFor="class-a-value">Item Name</Label>
-                  <Input id="class-a-value" value={value} onChange={(e) => setValue(e.target.value)} placeholder="e.g. Coke" className="w-[200px]" />
+                  <Input id="class-a-value" value={value} onChange={(e) => setValue(e.target.value)} placeholder="e.g. Coke" className="w-full sm:w-[200px]" />
                 </div>
               )}
               <Button onClick={handleAdd} disabled={!value.trim() || addItem.isPending}>
@@ -110,14 +110,21 @@ export function BrandClassAItemsTab({ brand, outletId }: { brand: string; outlet
 
           <div className="flex flex-wrap gap-2">
             {entries?.map((entry) => (
-              <Badge key={entry.id} variant="secondary" className="gap-1 pr-1">
+              <Badge
+                key={entry.id}
+                variant="secondary"
+                // The badge is a fixed h-5 that clips overflow, so below md it lets the remove
+                // button's 32px tap area set its height instead.
+                className={cn('gap-1 pr-1', !isViewer && 'h-auto py-0 pr-0 md:h-5 md:py-0.5 md:pr-1')}
+              >
                 {entry.value}
                 <span className="text-muted-foreground">({entry.type === 'ITEM' ? 'item' : 'category'})</span>
                 {!isViewer && (
                   <button
                     type="button"
                     onClick={() => removeItem.mutate({ id: entry.id, brand })}
-                    className="ml-1 rounded-full hover:bg-muted-foreground/20"
+                    aria-label={`Remove ${entry.value}`}
+                    className="rounded-full p-2.5 hover:bg-muted-foreground/20 md:ml-1 md:p-0"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -136,13 +143,13 @@ export function SuggestionChips({ suggestions, onPick }: { suggestions: string[]
   return (
     <div className="space-y-1">
       <p className="text-xs text-muted-foreground">Did you mean:</p>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2 md:gap-1.5">
         {suggestions.map((s) => (
           <button
             key={s}
             type="button"
             onClick={() => onPick(s)}
-            className="rounded-full border px-2.5 py-0.5 text-xs hover:bg-muted"
+            className="rounded-full border px-3 py-2 text-xs hover:bg-muted md:px-2.5 md:py-0.5"
           >
             {s}
           </button>
@@ -154,15 +161,15 @@ export function SuggestionChips({ suggestions, onPick }: { suggestions: string[]
 
 function ClassAItemCard({ row }: { row: ClassAItemSummaryRow }) {
   return (
-    <Card>
+    <Card className="min-w-0">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">{row.itemName}</CardTitle>
+        <CardTitle className="text-sm font-medium break-words">{row.itemName}</CardTitle>
         {row.category && <p className="text-xs text-muted-foreground">{row.category}</p>}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-semibold">{formatNumber(row.quantitySold)}</div>
+        <div className="text-lg font-semibold tabular-nums break-words sm:text-2xl">{formatNumber(row.quantitySold)}</div>
         <p className="text-xs text-muted-foreground">units sold</p>
-        <div className="mt-2 text-sm font-medium">{formatCurrency(row.revenue)}</div>
+        <div className="mt-2 text-sm font-medium tabular-nums break-words">{formatCurrency(row.revenue)}</div>
         <p className="text-xs text-muted-foreground">revenue &middot; avg {formatCurrency(row.averagePrice)}</p>
       </CardContent>
     </Card>

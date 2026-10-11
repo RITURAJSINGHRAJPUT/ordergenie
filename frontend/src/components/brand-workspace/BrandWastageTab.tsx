@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/shared/Pagination';
+import { MobileCard, MobileCardList, MobileField, MobileFields } from '@/components/shared/MobileCard';
 import { useWastageEntries, useCreateWastageEntry, useDeleteWastageEntry } from '@/hooks/useWastage';
 import { useResettingPage } from '@/hooks/useResettingPage';
 import { useFilterStore } from '@/store/filterStore';
@@ -131,7 +132,7 @@ export function BrandWastageTab({ brand, outletId }: { brand: string; outletId: 
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Optional"
               rows={2}
-              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm"
+              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm md:text-sm"
             />
           </div>
           <Button onClick={handleAdd} disabled={!canSubmit || createEntry.isPending}>
@@ -158,7 +159,7 @@ export function BrandWastageTab({ brand, outletId }: { brand: string; outletId: 
             <p className="text-sm text-muted-foreground">No wastage reported for this period.</p>
           ) : (
             <>
-              <div className="overflow-x-auto">
+              <div className="hidden overflow-x-auto md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -193,7 +194,7 @@ export function BrandWastageTab({ brand, outletId }: { brand: string; outletId: 
                             <button
                               type="button"
                               onClick={() => deleteEntry.mutate(w.id)}
-                              className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-destructive"
+                              className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-destructive md:p-1"
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -204,6 +205,42 @@ export function BrandWastageTab({ brand, outletId }: { brand: string; outletId: 
                   </TableBody>
                 </Table>
               </div>
+              <MobileCardList>
+                {data.rows.map((w) => (
+                  <MobileCard
+                    key={w.id}
+                    title={w.itemName}
+                    subtitle={`${formatDate(w.wastageDate)} · ${w.outletName}`}
+                    aside={
+                      canDelete && (
+                        <button
+                          type="button"
+                          onClick={() => deleteEntry.mutate(w.id)}
+                          aria-label="Delete wastage entry"
+                          className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-destructive md:p-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )
+                    }
+                  >
+                    <MobileFields>
+                      <MobileField label="Quantity">
+                        {formatNumber(w.quantity)}
+                        {w.unit && ` ${w.unit}`}
+                      </MobileField>
+                      <MobileField label="Reason">{REASON_LABEL[w.reason]}</MobileField>
+                      <MobileField label="Category">{w.category ?? '—'}</MobileField>
+                      <MobileField label="Reported By">{w.reportedByName ?? '—'}</MobileField>
+                      {w.notes && (
+                        <MobileField label="Notes" wide>
+                          {w.notes}
+                        </MobileField>
+                      )}
+                    </MobileFields>
+                  </MobileCard>
+                ))}
+              </MobileCardList>
               <Pagination meta={data.meta} onPageChange={setPage} />
             </>
           )}

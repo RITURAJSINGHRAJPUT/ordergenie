@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/shared/Pagination';
+import { MobileCard, MobileCardList } from '@/components/shared/MobileCard';
 import { usePredictedSales } from '@/hooks/usePredictedSales';
 import { useResettingPage } from '@/hooks/useResettingPage';
 import { useFilterStore } from '@/store/filterStore';
@@ -42,7 +43,7 @@ export function BrandPredictionsTab({ brand, outletId }: { brand: string; outlet
           <p className="text-sm text-muted-foreground">No forecast data for this outlet in the selected range.</p>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="hidden overflow-x-auto md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -64,6 +65,21 @@ export function BrandPredictionsTab({ brand, outletId }: { brand: string; outlet
                 </TableBody>
               </Table>
             </div>
+            <MobileCardList>
+              {data.rows.map((row) => (
+                <MobileCard
+                  key={`${row.stockDate}|${row.itemName}`}
+                  title={row.itemName}
+                  subtitle={`${formatDate(row.stockDate)} · ${row.source}`}
+                  aside={
+                    <>
+                      <div className="font-semibold tabular-nums">{formatNumber(row.predictedQty)}</div>
+                      <div className="text-[11px] text-muted-foreground">predicted</div>
+                    </>
+                  }
+                />
+              ))}
+            </MobileCardList>
             <Pagination meta={data.meta} onPageChange={setPage} />
           </>
         )}

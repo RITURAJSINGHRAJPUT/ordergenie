@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/shared/Pagination';
+import { MobileCard, MobileCardList, MobileField, MobileFields } from '@/components/shared/MobileCard';
 import { useInventory } from '@/hooks/useInventory';
 import { useResettingPage } from '@/hooks/useResettingPage';
 import { useFilterStore } from '@/store/filterStore';
@@ -32,7 +33,7 @@ export function BrandInventoryTab({ brand, outletId }: { brand: string; outletId
           <p className="text-sm text-destructive">Failed to load inventory.</p>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="hidden overflow-x-auto md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -68,6 +69,27 @@ export function BrandInventoryTab({ brand, outletId }: { brand: string; outletId
                 </TableBody>
               </Table>
             </div>
+            <MobileCardList>
+              {/* The table shows its header row when empty; a bare card list would show nothing at all. */}
+              {data.rows.length === 0 && <p className="text-sm text-muted-foreground">No stock data for this period.</p>}
+              {data.rows.map((i) => (
+                <MobileCard
+                  key={i.id}
+                  title={i.itemName}
+                  subtitle={[i.outletName, i.category, i.store].filter(Boolean).join(' · ')}
+                  aside={i.isLowStock ? <Badge variant="destructive">Low Stock</Badge> : <Badge variant="secondary">OK</Badge>}
+                >
+                  <MobileFields>
+                    <MobileField label="Closing">{formatNumber(i.closingStock)}</MobileField>
+                    <MobileField label="Value">{formatCurrency(i.stockValue)}</MobileField>
+                    <MobileField label="Opening">{formatNumber(i.openingStock)}</MobileField>
+                    <MobileField label="Purchased">{formatNumber(i.purchasedQty)}</MobileField>
+                    <MobileField label="Consumed">{formatNumber(i.consumedQty)}</MobileField>
+                    <MobileField label="As of">{formatDate(i.stockDate)}</MobileField>
+                  </MobileFields>
+                </MobileCard>
+              ))}
+            </MobileCardList>
             <Pagination meta={data.meta} onPageChange={setPage} />
           </>
         )}

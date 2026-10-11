@@ -618,7 +618,7 @@ function ReconciliationTableRow({ row, outletId, brand, date, canManageSelection
               type="button"
               onClick={() => removeClassAItem.mutate({ id: row.classAItemId, brand })}
               title="Remove from selection"
-              className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-destructive"
+              className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-destructive md:p-1"
             >
               <X className="h-4 w-4" />
             </button>
@@ -658,7 +658,7 @@ function ReconciliationCard({ row, outletId, brand, date, canManageSelection, ca
                 disabled={!onMove.up}
                 onClick={onMove.up}
                 title="Move up"
-                className="rounded-md p-1 text-muted-foreground hover:bg-muted disabled:opacity-30"
+                className="rounded-md p-2 text-muted-foreground hover:bg-muted disabled:opacity-30 md:p-1"
               >
                 <ArrowUp className="h-4 w-4" />
               </button>
@@ -667,7 +667,7 @@ function ReconciliationCard({ row, outletId, brand, date, canManageSelection, ca
                 disabled={!onMove.down}
                 onClick={onMove.down}
                 title="Move down"
-                className="rounded-md p-1 text-muted-foreground hover:bg-muted disabled:opacity-30"
+                className="rounded-md p-2 text-muted-foreground hover:bg-muted disabled:opacity-30 md:p-1"
               >
                 <ArrowDown className="h-4 w-4" />
               </button>
@@ -678,7 +678,7 @@ function ReconciliationCard({ row, outletId, brand, date, canManageSelection, ca
               type="button"
               onClick={() => removeClassAItem.mutate({ id: row.classAItemId, brand })}
               title="Remove from selection"
-              className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-destructive"
+              className="shrink-0 rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-destructive md:p-1"
             >
               <X className="h-4 w-4" />
             </button>
@@ -738,6 +738,11 @@ function ReconciliationCard({ row, outletId, brand, date, canManageSelection, ca
             tone={varianceTone(row.wastage, row.factualClosingAI)}
           />
         </div>
+
+        {/* The table shows these to managers only as a hover title, which touch screens never get. */}
+        {canManageSelection && row.purchaseAliases.length > 0 && (
+          <p className="text-xs break-words text-muted-foreground">PO also counts: {row.purchaseAliases.join(', ')}</p>
+        )}
 
         {canEdit && (
           <Button

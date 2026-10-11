@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Pagination } from '@/components/shared/Pagination';
+import { MobileCard, MobileCardList, MobileField, MobileFields } from '@/components/shared/MobileCard';
 import { useInventory, useInventoryStores, useInventoryCategories } from '@/hooks/useInventory';
 import { formatCurrency, formatDate, formatNumber } from '@/lib/format';
+import type { InventoryRow } from '@/types/api';
 
 export default function InventoryPage() {
   const [page, setPage] = useState(1);
@@ -30,9 +32,9 @@ export default function InventoryPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Inventory</h1>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Select value={store} onValueChange={(v) => { setStore(v ?? 'all'); setPage(1); }}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-full sm:w-[150px]">
               <SelectValue placeholder="Store" />
             </SelectTrigger>
             <SelectContent>
@@ -43,7 +45,7 @@ export default function InventoryPage() {
             </SelectContent>
           </Select>
           <Select value={category} onValueChange={(v) => { setCategory(v ?? 'all'); setPage(1); }}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-full sm:w-[150px]">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
@@ -75,7 +77,7 @@ export default function InventoryPage() {
             <p className="text-sm text-destructive">Failed to load inventory.</p>
           ) : (
             <>
-              <div className="overflow-x-auto">
+              <div className="hidden overflow-x-auto md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -113,11 +115,37 @@ export default function InventoryPage() {
                   </TableBody>
                 </Table>
               </div>
+              <MobileCardList>
+                {data.rows.map((i) => (
+                  <InventoryCard key={i.id} item={i} />
+                ))}
+              </MobileCardList>
               <Pagination meta={data.meta} onPageChange={setPage} />
             </>
           )}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function InventoryCard({ item }: { item: InventoryRow }) {
+  return (
+    <MobileCard
+      title={item.itemName}
+      subtitle={item.outletName}
+      aside={item.isLowStock ? <Badge variant="destructive">Low Stock</Badge> : <Badge variant="secondary">OK</Badge>}
+    >
+      <MobileFields>
+        <MobileField label="Opening">{formatNumber(item.openingStock)}</MobileField>
+        <MobileField label="Purchased">{formatNumber(item.purchasedQty)}</MobileField>
+        <MobileField label="Consumed">{formatNumber(item.consumedQty)}</MobileField>
+        <MobileField label="Closing">{formatNumber(item.closingStock)}</MobileField>
+        <MobileField label="Value">{formatCurrency(item.stockValue)}</MobileField>
+        <MobileField label="As of">{formatDate(item.stockDate)}</MobileField>
+        <MobileField label="Category">{item.category ?? '—'}</MobileField>
+        <MobileField label="Store">{item.store ?? '—'}</MobileField>
+      </MobileFields>
+    </MobileCard>
   );
 }

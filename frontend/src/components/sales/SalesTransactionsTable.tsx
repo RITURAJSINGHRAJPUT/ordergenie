@@ -7,9 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/shared/Pagination';
+import { MobileCard, MobileCardList, MobileField, MobileFields } from '@/components/shared/MobileCard';
 import { useSaleDetail } from '@/hooks/useSales';
 import { formatCurrency, formatDate, formatNumber, formatTime } from '@/lib/format';
 import { downloadCsv } from '@/lib/csv';
+import { cn } from '@/lib/utils';
 import type { PaginationMeta, SaleRow } from '@/types/api';
 
 const COLUMN_COUNT = 11;
@@ -73,7 +75,7 @@ export function SalesTransactionsTable({
           <p className="text-sm text-destructive">Failed to load sales.</p>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="hidden overflow-x-auto md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -115,6 +117,11 @@ export function SalesTransactionsTable({
                 </TableBody>
               </Table>
             </div>
+            <MobileCardList>
+              {rows.map((s) => (
+                <SaleCard key={s.id} sale={s} isExpanded={expanded.has(s.id)} onToggle={() => toggleRow(s.id)} />
+              ))}
+            </MobileCardList>
             <Pagination meta={meta} onPageChange={onPageChange} />
           </>
         )}
@@ -169,5 +176,71 @@ function SaleItemsRow({ saleId, net }: { saleId: string; net: number }) {
         )}
       </TableCell>
     </TableRow>
+  );
+}
+
+function SaleCard({ sale, isExpanded, onToggle }: { sale: SaleRow; isExpanded: boolean; onToggle: () => void }) {
+  return (
+    <MobileCard
+      title={sale.invoiceNumber}
+      aside={
+        <div className="flex items-center gap-1.5">
+          <span className="font-semibold">{formatCurrency(sale.net)}</span>
+          <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', isExpanded && 'rotate-180')} />
+        </div>
+      }
+      onClick={onToggle}
+    >
+      <MobileFields>
+        <MobileField label="Outlet" wide>{sale.outletName}</MobileField>
+        <MobileField label="Date · Time">
+          {formatDate(sale.date)} · {formatTime(sale.time)}
+        </MobileField>
+        <MobileField label="Customer">{sale.customer ?? '—'}</MobileField>
+        <MobileField label="Gross">{formatCurrency(sale.gross)}</MobileField>
+        <MobileField label="Discount">{formatCurrency(sale.discount)}</MobileField>
+        <MobileField label="Tax">{formatCurrency(sale.tax)}</MobileField>
+        <MobileField label="Payment">{sale.paymentMode}</MobileField>
+      </MobileFields>
+      {isExpanded && <SaleItemsList saleId={sale.id} net={sale.net} />}
+    </MobileCard>
+  );
+}
+
+/** Phone counterpart of SaleItemsRow — a nested table is unreadable at card width. */
+function SaleItemsList({ saleId, net }: { saleId: string; net: number }) {
+  const { data, isLoading, isError } = useSaleDetail(saleId);
+
+  // Taps on the item list shouldn't bubble up and collapse the card, same as the desktop detail row.
+  return (
+    <div className="border-t pt-2" onClick={(e) => e.stopPropagation()}>
+      {isLoading ? (
+        <div className="space-y-2 py-1">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-full" />
+        </div>
+      ) : isError || !data ? (
+        <p className="py-1 text-sm text-destructive">Failed to load item details.</p>
+      ) : (
+        <>
+          <ul className="divide-y">
+            {data.items.map((item, idx) => (
+              <li key={idx} className="flex items-start justify-between gap-3 py-2">
+                <div className="min-w-0 break-words">
+                  <div>
+                    {item.itemName} <span className="text-muted-foreground">× {formatNumber(item.quantity)}</span>
+                  </div>
+                  {item.category && <div className="text-xs text-muted-foreground">{item.category}</div>}
+                </div>
+                <span className="shrink-0 font-medium">{formatCurrency(item.total)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="pt-2 text-right text-sm text-muted-foreground">
+            {data.items.length} item{data.items.length === 1 ? '' : 's'} &middot; total {formatCurrency(net)}
+          </p>
+        </>
+      )}
+    </div>
   );
 }

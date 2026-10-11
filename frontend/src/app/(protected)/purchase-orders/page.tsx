@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pagination } from '@/components/shared/Pagination';
+import { MobileCard, MobileCardList, MobileField, MobileFields } from '@/components/shared/MobileCard';
 import { DateRangeFilter } from '@/components/shared/DateRangeFilter';
 import { PurchaseOrderDetailDialog } from '@/components/purchase-orders/PurchaseOrderDetailDialog';
 import { STATUS_VARIANT } from '@/components/purchase-orders/status';
@@ -31,15 +32,15 @@ export default function PurchaseOrdersPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Purchase Orders</h1>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Input
             placeholder="Search PO number..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-[200px]"
+            className="w-full sm:w-[200px]"
           />
           <Select value={status} onValueChange={(v) => setStatus(v ?? 'all')}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -68,7 +69,7 @@ export default function PurchaseOrdersPage() {
             <p className="text-sm text-destructive">Failed to load purchase orders.</p>
           ) : (
             <>
-              <div className="overflow-x-auto">
+              <div className="hidden overflow-x-auto md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -96,6 +97,23 @@ export default function PurchaseOrdersPage() {
                   </TableBody>
                 </Table>
               </div>
+              <MobileCardList>
+                {data.rows.map((po) => (
+                  <MobileCard
+                    key={po.id}
+                    title={po.poNumber}
+                    subtitle={po.vendorName}
+                    aside={<Badge variant={STATUS_VARIANT[po.status]}>{po.status.replace('_', ' ')}</Badge>}
+                    onClick={() => setSelectedId(po.id)}
+                  >
+                    <MobileFields>
+                      <MobileField label="Amount">{formatCurrency(po.totalAmount)}</MobileField>
+                      <MobileField label="Expected Date">{po.expectedDate ? formatDate(po.expectedDate) : '—'}</MobileField>
+                      <MobileField label="Outlet" wide>{po.outletName}</MobileField>
+                    </MobileFields>
+                  </MobileCard>
+                ))}
+              </MobileCardList>
               <Pagination meta={data.meta} onPageChange={setPage} />
             </>
           )}

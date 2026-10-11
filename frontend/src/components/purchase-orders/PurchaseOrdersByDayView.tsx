@@ -46,7 +46,8 @@ export function PurchaseOrdersByDayView({ brand, outletId }: { brand: string; ou
               <TableBody>
                 {day.items.map((item) => (
                   <TableRow key={`${item.itemName}|${item.unit ?? ''}`}>
-                    <TableCell className="font-medium">{item.itemName}</TableCell>
+                    {/* Only three narrow columns, so a phone just needs long item names to wrap instead of scrolling. */}
+                    <TableCell className="font-medium whitespace-normal md:whitespace-nowrap">{item.itemName}</TableCell>
                     <TableCell>{item.unit ?? '—'}</TableCell>
                     <TableCell className="text-right">{item.quantity}</TableCell>
                   </TableRow>

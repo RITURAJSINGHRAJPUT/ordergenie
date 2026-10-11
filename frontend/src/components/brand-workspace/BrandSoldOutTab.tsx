@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination } from '@/components/shared/Pagination';
+import { MobileCard, MobileCardList, MobileField, MobileFields } from '@/components/shared/MobileCard';
 import { useSoldOut, useUpsertSoldOutEntry } from '@/hooks/useSoldOut';
 import { useResettingPage } from '@/hooks/useResettingPage';
 import { useFilterStore } from '@/store/filterStore';
@@ -78,7 +79,7 @@ export function BrandSoldOutTab({ brand, outletId }: { brand: string; outletId: 
           <p className="text-sm text-muted-foreground">No sales or sold-out entries for this outlet on this date.</p>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="hidden overflow-x-auto md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -102,23 +103,35 @@ export function BrandSoldOutTab({ brand, outletId }: { brand: string; outletId: 
                 </TableBody>
               </Table>
             </div>
+            <MobileCardList>
+              {data.rows.map((row) => (
+                <SoldOutCard
+                  key={`${outletId}|${date}|${row.itemName}`}
+                  row={row}
+                  outletId={outletId}
+                  date={date}
+                  canEdit={!isViewer}
+                />
+              ))}
+            </MobileCardList>
             <Pagination meta={data.meta} onPageChange={setPage} />
           </>
         )}
 
         {!isAllOutlets && !isViewer && (
-          <div className="flex items-end gap-2 border-t pt-3">
-            <div className="space-y-1">
+          <div className="flex flex-wrap items-end gap-2 border-t pt-3">
+            <div className="w-full space-y-1 sm:w-auto">
               <Label htmlFor="new-sold-out-item">Item</Label>
               <Input
                 id="new-sold-out-item"
                 value={newItemName}
                 onChange={(e) => setNewItemName(e.target.value)}
                 placeholder="e.g. Tiramisu"
-                className="h-8 w-48"
+                className="w-full sm:w-48"
               />
             </div>
-            <div className="space-y-1">
+            {/* Below sm the qty box grows to share its row with + Add rather than sit alone. */}
+            <div className="min-w-0 flex-1 space-y-1 sm:flex-none">
               <Label htmlFor="new-sold-out-qty">Missed</Label>
               <Input
                 id="new-sold-out-qty"
@@ -127,12 +140,13 @@ export function BrandSoldOutTab({ brand, outletId }: { brand: string; outletId: 
                 min="0"
                 value={newMissedQty}
                 onChange={(e) => setNewMissedQty(sanitizeQty(e.target.value))}
-                className="h-8 w-24 text-right"
+                className="w-full text-right sm:w-24"
               />
             </div>
             <Button
               size="sm"
               variant="outline"
+              className="pointer-coarse:h-10"
               disabled={!newItemName.trim() || !newMissedQty || upsert.isPending}
               onClick={handleAddItem}
             >
@@ -145,17 +159,15 @@ export function BrandSoldOutTab({ brand, outletId }: { brand: string; outletId: 
   );
 }
 
-function SoldOutRowCells({
-  row,
-  outletId,
-  date,
-  canEdit,
-}: {
+interface SoldOutRowProps {
   row: SoldOutRow;
   outletId: string;
   date: string;
   canEdit: boolean;
-}) {
+}
+
+/** Missed-qty edit state shared by the table row (md and up) and the card (phones) for the same data row. */
+function useMissedQtyEditor(row: SoldOutRow, outletId: string, date: string) {
   const upsert = useUpsertSoldOutEntry();
   const [missedQty, setMissedQty] = useState(String(row.missedQty));
 
@@ -167,11 +179,21 @@ function SoldOutRowCells({
     setMissedQty(String(row.missedQty));
   }
 
-  const dirty = Number(missedQty || 0) !== row.missedQty;
-
   function handleSave() {
     upsert.mutate({ outletId, itemName: row.itemName, date, missedQty: Number(missedQty || 0) });
   }
+
+  return {
+    missedQty,
+    setMissedQty: (raw: string) => setMissedQty(sanitizeQty(raw)),
+    dirty: Number(missedQty || 0) !== row.missedQty,
+    saving: upsert.isPending,
+    handleSave,
+  };
+}
+
+function SoldOutRowCells({ row, outletId, date, canEdit }: SoldOutRowProps) {
+  const editor = useMissedQtyEditor(row, outletId, date);
 
   return (
     <TableRow>
@@ -190,9 +212,9 @@ function SoldOutRowCells({
             type="number"
             step="1"
             min="0"
-            value={missedQty}
-            onChange={(e) => setMissedQty(sanitizeQty(e.target.value))}
-            className="h-8 w-24 text-right"
+            value={editor.missedQty}
+            onChange={(e) => editor.setMissedQty(e.target.value)}
+            className="h-8 w-24 text-right pointer-coarse:h-8"
           />
         ) : (
           formatNumber(row.missedQty)
@@ -201,11 +223,68 @@ function SoldOutRowCells({
       <TableCell className="text-right">{ratioBadge(row.ratio)}</TableCell>
       <TableCell>
         {canEdit && (
-          <Button size="sm" variant="outline" disabled={!dirty || upsert.isPending} onClick={handleSave}>
+          <Button size="sm" variant="outline" disabled={!editor.dirty || editor.saving} onClick={editor.handleSave}>
             Save
           </Button>
         )}
       </TableCell>
     </TableRow>
+  );
+}
+
+function SoldOutCard({ row, outletId, date, canEdit }: SoldOutRowProps) {
+  const editor = useMissedQtyEditor(row, outletId, date);
+  const inputId = useId();
+
+  return (
+    <MobileCard
+      title={
+        <>
+          {row.itemName}
+          {!row.hasEntry && (
+            <Badge variant="outline" className="ml-2 align-middle">
+              Not entered
+            </Badge>
+          )}
+        </>
+      }
+      aside={
+        <>
+          <div className="text-[11px] text-muted-foreground">Ratio</div>
+          {ratioBadge(row.ratio)}
+        </>
+      }
+    >
+      <MobileFields>
+        <MobileField label="Sold">{formatNumber(row.soldQty)}</MobileField>
+        {canEdit ? (
+          <div className="min-w-0 space-y-1">
+            <dt>
+              <Label htmlFor={inputId} className="text-[11px] text-muted-foreground">
+                Missed
+              </Label>
+            </dt>
+            <dd>
+              <Input
+                id={inputId}
+                type="number"
+                step="1"
+                min="0"
+                value={editor.missedQty}
+                onChange={(e) => editor.setMissedQty(e.target.value)}
+                className="text-right"
+              />
+            </dd>
+          </div>
+        ) : (
+          <MobileField label="Missed">{formatNumber(row.missedQty)}</MobileField>
+        )}
+      </MobileFields>
+      {canEdit && (
+        <Button variant="outline" className="w-full" disabled={!editor.dirty || editor.saving} onClick={editor.handleSave}>
+          Save
+        </Button>
+      )}
+    </MobileCard>
   );
 }

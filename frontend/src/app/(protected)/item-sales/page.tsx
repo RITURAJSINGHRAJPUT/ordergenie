@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Pagination } from '@/components/shared/Pagination';
+import { MobileCard, MobileCardList, MobileField, MobileFields } from '@/components/shared/MobileCard';
 import { ItemDetailDialog } from '@/components/item-sales/ItemDetailDialog';
 import { useItemSales } from '@/hooks/useSales';
 import { useItemCategories } from '@/hooks/useItemCategories';
@@ -32,7 +33,7 @@ export default function ItemSalesPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Item Sales</h1>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Input
             placeholder="Search items..."
             value={search}
@@ -40,7 +41,7 @@ export default function ItemSalesPage() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            className="w-[180px]"
+            className="w-full sm:w-[180px]"
           />
           <Select
             value={category}
@@ -49,7 +50,7 @@ export default function ItemSalesPage() {
               setPage(1);
             }}
           >
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-full sm:w-[160px]">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
@@ -83,7 +84,7 @@ export default function ItemSalesPage() {
             <p className="text-sm text-destructive">Failed to load item sales.</p>
           ) : (
             <>
-              <div className="overflow-x-auto">
+              <div className="hidden overflow-x-auto md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -115,6 +116,24 @@ export default function ItemSalesPage() {
                   </TableBody>
                 </Table>
               </div>
+              <MobileCardList>
+                {data.rows.map((i) => (
+                  <MobileCard
+                    key={i.itemName}
+                    title={i.itemName}
+                    subtitle={i.category}
+                    aside={<span className="font-semibold">{formatCurrency(i.revenue)}</span>}
+                    onClick={() => setSelectedItem(i.itemName)}
+                  >
+                    <MobileFields>
+                      <MobileField label="Qty Sold">{formatNumber(i.quantitySold)}</MobileField>
+                      <MobileField label="Avg Price">{formatCurrency(i.averagePrice)}</MobileField>
+                      <MobileField label="Discount">{formatCurrency(i.discount)}</MobileField>
+                      <MobileField label="Tax">{formatCurrency(i.tax)}</MobileField>
+                    </MobileFields>
+                  </MobileCard>
+                ))}
+              </MobileCardList>
               <Pagination meta={data.meta} onPageChange={setPage} />
             </>
           )}

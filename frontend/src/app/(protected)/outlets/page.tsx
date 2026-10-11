@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Pagination } from '@/components/shared/Pagination';
+import { MobileCard, MobileCardList, MobileField, MobileFields } from '@/components/shared/MobileCard';
 import { useOutletsOverview, useOutletComparison } from '@/hooks/useOutletsOverview';
 import { usePagedList } from '@/hooks/usePagedList';
 import { formatCurrency, formatNumber } from '@/lib/format';
@@ -52,40 +53,59 @@ export default function OutletsPage() {
               ) : overviewError || !overview ? (
                 <p className="text-sm text-destructive">Failed to load outlets.</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Outlet</TableHead>
-                        <TableHead>Brand</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead className="text-right">Today&apos;s Sales</TableHead>
-                        <TableHead className="text-right">Orders</TableHead>
-                        <TableHead className="text-right">Inventory Value</TableHead>
-                        <TableHead className="text-right">Open POs</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {overviewPage.map((o) => (
-                        <TableRow key={o.id}>
-                          <TableCell className="font-medium">
-                            {o.name}
-                            {o.city && <span className="ml-1 text-xs text-muted-foreground">({o.city})</span>}
-                          </TableCell>
-                          <TableCell>{o.brand}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{o.outletType.replace('_', ' ')}</Badge>
-                          </TableCell>
-                          <TableCell className="text-right">{formatCurrency(o.todaySales)}</TableCell>
-                          <TableCell className="text-right">{formatNumber(o.todayOrders)}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(o.inventoryValue)}</TableCell>
-                          <TableCell className="text-right">{formatNumber(o.openPurchaseOrders)}</TableCell>
+                <>
+                  <div className="hidden overflow-x-auto md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Outlet</TableHead>
+                          <TableHead>Brand</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead className="text-right">Today&apos;s Sales</TableHead>
+                          <TableHead className="text-right">Orders</TableHead>
+                          <TableHead className="text-right">Inventory Value</TableHead>
+                          <TableHead className="text-right">Open POs</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {overviewPage.map((o) => (
+                          <TableRow key={o.id}>
+                            <TableCell className="font-medium">
+                              {o.name}
+                              {o.city && <span className="ml-1 text-xs text-muted-foreground">({o.city})</span>}
+                            </TableCell>
+                            <TableCell>{o.brand}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{o.outletType.replace('_', ' ')}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">{formatCurrency(o.todaySales)}</TableCell>
+                            <TableCell className="text-right">{formatNumber(o.todayOrders)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(o.inventoryValue)}</TableCell>
+                            <TableCell className="text-right">{formatNumber(o.openPurchaseOrders)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <MobileCardList>
+                    {overviewPage.map((o) => (
+                      <MobileCard
+                        key={o.id}
+                        title={o.name}
+                        subtitle={o.city ? `${o.brand} · ${o.city}` : o.brand}
+                        aside={<Badge variant="outline">{o.outletType.replace('_', ' ')}</Badge>}
+                      >
+                        <MobileFields>
+                          <MobileField label="Today's Sales">{formatCurrency(o.todaySales)}</MobileField>
+                          <MobileField label="Orders">{formatNumber(o.todayOrders)}</MobileField>
+                          <MobileField label="Inventory Value">{formatCurrency(o.inventoryValue)}</MobileField>
+                          <MobileField label="Open POs">{formatNumber(o.openPurchaseOrders)}</MobileField>
+                        </MobileFields>
+                      </MobileCard>
+                    ))}
+                  </MobileCardList>
                   <Pagination meta={overviewMeta} onPageChange={setOverviewPage} />
-                </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -107,32 +127,58 @@ export default function OutletsPage() {
               ) : comparisonError || !comparison ? (
                 <p className="text-sm text-destructive">Failed to load outlet comparison.</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Outlet</TableHead>
-                        <TableHead>Brand</TableHead>
-                        <TableHead className="text-right">Revenue</TableHead>
-                        <TableHead className="text-right">Orders</TableHead>
-                        <TableHead className="text-right">Avg Bill</TableHead>
-                        <TableHead className="text-right">Growth</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {comparisonPage.map((o) => (
-                        <TableRow key={o.id}>
-                          <TableCell className="font-medium">{o.name}</TableCell>
-                          <TableCell>{o.brand}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(o.revenue)}</TableCell>
-                          <TableCell className="text-right">{formatNumber(o.orders)}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(o.averageBill)}</TableCell>
-                          <TableCell className="text-right">
-                            {o.growthPercent === null ? (
-                              '—'
-                            ) : (
+                <>
+                  <div className="hidden overflow-x-auto md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Outlet</TableHead>
+                          <TableHead>Brand</TableHead>
+                          <TableHead className="text-right">Revenue</TableHead>
+                          <TableHead className="text-right">Orders</TableHead>
+                          <TableHead className="text-right">Avg Bill</TableHead>
+                          <TableHead className="text-right">Growth</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {comparisonPage.map((o) => (
+                          <TableRow key={o.id}>
+                            <TableCell className="font-medium">{o.name}</TableCell>
+                            <TableCell>{o.brand}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(o.revenue)}</TableCell>
+                            <TableCell className="text-right">{formatNumber(o.orders)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(o.averageBill)}</TableCell>
+                            <TableCell className="text-right">
+                              {o.growthPercent === null ? (
+                                '—'
+                              ) : (
+                                <span
+                                  className={`inline-flex items-center gap-1 ${
+                                    o.growthPercent >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
+                                  }`}
+                                >
+                                  {o.growthPercent >= 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                                  {Math.abs(o.growthPercent).toFixed(1)}%
+                                </span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <MobileCardList>
+                    {comparisonPage.map((o) => (
+                      <MobileCard
+                        key={o.id}
+                        title={o.name}
+                        subtitle={o.brand}
+                        aside={
+                          <>
+                            <div className="font-semibold">{formatCurrency(o.revenue)}</div>
+                            {o.growthPercent !== null && (
                               <span
-                                className={`inline-flex items-center gap-1 ${
+                                className={`inline-flex items-center gap-1 text-xs ${
                                   o.growthPercent >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
                                 }`}
                               >
@@ -140,13 +186,18 @@ export default function OutletsPage() {
                                 {Math.abs(o.growthPercent).toFixed(1)}%
                               </span>
                             )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                          </>
+                        }
+                      >
+                        <MobileFields>
+                          <MobileField label="Orders">{formatNumber(o.orders)}</MobileField>
+                          <MobileField label="Avg Bill">{formatCurrency(o.averageBill)}</MobileField>
+                        </MobileFields>
+                      </MobileCard>
+                    ))}
+                  </MobileCardList>
                   <Pagination meta={comparisonMeta} onPageChange={setComparisonPage} />
-                </div>
+                </>
               )}
             </CardContent>
           </Card>

@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/shared/Pagination';
+import { MobileCard, MobileCardList, MobileField, MobileFields } from '@/components/shared/MobileCard';
 import { PurchaseOrderDetailDialog } from '@/components/purchase-orders/PurchaseOrderDetailDialog';
 import { PurchaseOrdersByDayView } from '@/components/purchase-orders/PurchaseOrdersByDayView';
 import { STATUS_VARIANT } from '@/components/purchase-orders/status';
@@ -51,13 +52,13 @@ export function BrandPurchaseOrdersTab({ brand, outletId }: { brand: string; out
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+      <CardHeader className="flex flex-col gap-2 space-y-0 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="text-base">Orders</CardTitle>
         <Input
           placeholder="Search PO number..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-[200px]"
+          className="w-full sm:w-[200px]"
         />
       </CardHeader>
       <CardContent>
@@ -71,7 +72,7 @@ export function BrandPurchaseOrdersTab({ brand, outletId }: { brand: string; out
           <p className="text-sm text-destructive">Failed to load purchase orders.</p>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="hidden overflow-x-auto md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -99,6 +100,29 @@ export function BrandPurchaseOrdersTab({ brand, outletId }: { brand: string; out
                 </TableBody>
               </Table>
             </div>
+            <MobileCardList>
+              {/* The table shows its header row when empty; a bare card list would show nothing at all. */}
+              {data.rows.length === 0 && <p className="text-sm text-muted-foreground">No purchase orders found.</p>}
+              {data.rows.map((po) => (
+                <MobileCard
+                  key={po.id}
+                  title={po.poNumber}
+                  subtitle={po.vendorName}
+                  aside={<span className="font-semibold tabular-nums">{formatCurrency(po.totalAmount)}</span>}
+                  onClick={() => setSelectedId(po.id)}
+                >
+                  <MobileFields>
+                    <MobileField label="Status">
+                      <Badge variant={STATUS_VARIANT[po.status]}>{po.status.replace('_', ' ')}</Badge>
+                    </MobileField>
+                    <MobileField label="Expected">{po.expectedDate ? formatDate(po.expectedDate) : '—'}</MobileField>
+                    <MobileField label="Outlet" wide>
+                      {po.outletName}
+                    </MobileField>
+                  </MobileFields>
+                </MobileCard>
+              ))}
+            </MobileCardList>
             <Pagination meta={data.meta} onPageChange={setPage} />
           </>
         )}
