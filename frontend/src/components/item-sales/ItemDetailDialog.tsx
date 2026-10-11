@@ -5,17 +5,26 @@ import { Bar, BarChart } from 'recharts';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useItemDetail } from '@/hooks/useItemDetail';
-import { formatCurrency, formatDate, formatCurrencyTooltip, formatDateTooltip } from '@/lib/format';
+import {
+  formatCurrency,
+  formatCurrencyCompact,
+  formatDate,
+  formatDateShort,
+  formatCurrencyTooltip,
+  formatDateTooltip,
+} from '@/lib/format';
+import { useIsMobile } from '@/hooks/useMediaQuery';
 import { axisProps, tooltipProps } from '@/components/dashboard/chart-theme';
 
 export function ItemDetailDialog({ itemName, onClose }: { itemName: string | null; onClose: () => void }) {
   const { data, isLoading } = useItemDetail(itemName);
+  const isMobile = useIsMobile();
 
   return (
     <Dialog open={Boolean(itemName)} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{itemName}</DialogTitle>
+          <DialogTitle className="pr-8 leading-snug">{itemName}</DialogTitle>
         </DialogHeader>
 
         {isLoading || !data ? (
@@ -31,8 +40,19 @@ export function ItemDetailDialog({ itemName, onClose }: { itemName: string | nul
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data.dailyTrend}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="date" tickFormatter={(v) => formatDate(v)} fontSize={11} {...axisProps} />
-                    <YAxis tickFormatter={(v) => formatCurrency(v)} fontSize={11} width={70} {...axisProps} />
+                    <XAxis
+                      dataKey="date"
+                      tickFormatter={(v) => (isMobile ? formatDateShort(v) : formatDate(v))}
+                      fontSize={11}
+                      minTickGap={isMobile ? 12 : 5}
+                      {...axisProps}
+                    />
+                    <YAxis
+                      tickFormatter={(v) => (isMobile ? formatCurrencyCompact(v) : formatCurrency(v))}
+                      fontSize={11}
+                      width={isMobile ? 48 : 70}
+                      {...axisProps}
+                    />
                     <Tooltip formatter={formatCurrencyTooltip} labelFormatter={formatDateTooltip} {...tooltipProps} />
                     <Line type="monotone" dataKey="amount" stroke="var(--color-chart-1)" strokeWidth={2} dot={false} />
                   </LineChart>
@@ -46,7 +66,7 @@ export function ItemDetailDialog({ itemName, onClose }: { itemName: string | nul
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={data.peakHours.map((h) => ({ ...h, label: `${h.hour}:00` }))}>
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="label" fontSize={10} interval={2} {...axisProps} />
+                    <XAxis dataKey="label" fontSize={10} interval={isMobile ? 5 : 2} {...axisProps} />
                     <YAxis fontSize={11} width={40} {...axisProps} />
                     <Tooltip {...tooltipProps} />
                     <Bar dataKey="quantity" fill="var(--color-chart-3)" radius={[4, 4, 0, 0]} />
@@ -61,9 +81,9 @@ export function ItemDetailDialog({ itemName, onClose }: { itemName: string | nul
                 {data.outletComparison
                   .sort((a, b) => b.revenue - a.revenue)
                   .map((o) => (
-                    <div key={o.outletId} className="flex justify-between border-b py-1 last:border-0">
-                      <span>{o.outletName}</span>
-                      <span className="font-medium">{formatCurrency(o.revenue)}</span>
+                    <div key={o.outletId} className="flex justify-between gap-3 border-b py-1 last:border-0">
+                      <span className="min-w-0 break-words">{o.outletName}</span>
+                      <span className="shrink-0 font-medium">{formatCurrency(o.revenue)}</span>
                     </div>
                   ))}
               </div>

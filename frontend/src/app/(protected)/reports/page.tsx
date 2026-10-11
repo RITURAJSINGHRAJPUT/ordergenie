@@ -30,7 +30,7 @@ export default function ReportsPage() {
               <CardTitle className="text-base">{r.title}</CardTitle>
               <CardDescription>{r.description}</CardDescription>
             </CardHeader>
-            <CardContent className="flex gap-2">
+            <CardContent className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
                 size="sm"

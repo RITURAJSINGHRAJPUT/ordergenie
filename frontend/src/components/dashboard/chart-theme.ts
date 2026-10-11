@@ -19,6 +19,12 @@ export const tooltipProps = {
   cursor: { fill: 'var(--accent)' },
 } as const;
 
+/** Tick formatter that clips long category names (outlets, menu items) on narrow axes.
+ * The tooltip still shows the full name, since it reads the data rather than the tick. */
+export function truncateTick(max: number) {
+  return (value: string) => (value.length > max ? `${value.slice(0, max - 1)}…` : value);
+}
+
 /** Series colours, in the order charts should consume them. */
 export const CHART_COLORS = [
   'var(--color-chart-1)',

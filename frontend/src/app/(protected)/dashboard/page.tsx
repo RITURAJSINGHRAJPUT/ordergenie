@@ -16,7 +16,7 @@ export default function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
         {Array.from({ length: 8 }).map((_, i) => (
           <Skeleton key={i} className="h-28" />
         ))}
@@ -31,8 +31,8 @@ export default function DashboardPage() {
   const { kpis, charts } = data;
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
         <KpiCard label="Today's Sales" value={formatCurrency(kpis.todaySales)} icon={IndianRupee} hint={`${formatNumber(kpis.todayOrders)} orders`} />
         <KpiCard label="Yesterday Sales" value={formatCurrency(kpis.yesterdaySales)} icon={TrendingUp} />
         <KpiCard label="Monthly Sales" value={formatCurrency(kpis.monthlySales)} icon={IndianRupee} hint={`${formatNumber(kpis.monthlyOrders)} orders`} />
@@ -44,8 +44,8 @@ export default function DashboardPage() {
       </div>
 
       {kpis.lowStockItems > 0 && (
-        <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
-          <AlertTriangle className="h-4 w-4" />
+        <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           {kpis.lowStockItems} item{kpis.lowStockItems === 1 ? '' : 's'} running low on stock across outlets.
         </div>
       )}

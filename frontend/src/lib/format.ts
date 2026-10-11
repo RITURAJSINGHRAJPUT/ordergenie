@@ -4,10 +4,22 @@ const currencyFormatter = new Intl.NumberFormat('en-IN', {
   maximumFractionDigits: 0,
 });
 
+const compactCurrencyFormatter = new Intl.NumberFormat('en-IN', {
+  style: 'currency',
+  currency: 'INR',
+  notation: 'compact',
+  maximumFractionDigits: 1,
+});
+
 const numberFormatter = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
 
 export function formatCurrency(value: number): string {
   return currencyFormatter.format(value ?? 0);
+}
+
+/** ₹12K / ₹1.2L / ₹12.3Cr — for chart axes on phones, where full amounts collide. */
+export function formatCurrencyCompact(value: number): string {
+  return compactCurrencyFormatter.format(value ?? 0);
 }
 
 export function formatNumber(value: number): string {
@@ -17,6 +29,12 @@ export function formatNumber(value: number): string {
 export function formatDate(value: string | Date): string {
   const d = typeof value === 'string' ? new Date(value) : value;
   return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+/** "11 Oct" — date without the year, for crowded chart axes. */
+export function formatDateShort(value: string | Date): string {
+  const d = typeof value === 'string' ? new Date(value) : value;
+  return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
 }
 
 export function formatTime(value: string | Date): string {
