@@ -5,6 +5,12 @@ import { Download } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -48,14 +54,26 @@ export default function PoLookupPage() {
                 className="w-[180px]"
               />
             </div>
-            <Button
-              variant="outline"
-              disabled={!hasRows || downloadPdf.isPending}
-              onClick={() => downloadPdf.mutate(date)}
-            >
-              <Download className="mr-1 h-4 w-4" />
-              {downloadPdf.isPending ? 'Preparing…' : 'Download PDF'}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={<Button variant="outline" disabled={!hasRows || downloadPdf.isPending} />}
+              >
+                <Download className="mr-1 h-4 w-4" />
+                {downloadPdf.isPending ? 'Preparing…' : 'Download PDF'}
+              </DropdownMenuTrigger>
+              {/* Driven by the day's cities rather than a fixed Surat/Ahmedabad list, so a new
+                  city appears here the moment an outlet is opened there. */}
+              <DropdownMenuContent align="start" className="min-w-44">
+                {(data ?? [])
+                  .filter((city) => city.rows.length > 0)
+                  .map((city) => (
+                    <DropdownMenuItem key={city.city} onClick={() => downloadPdf.mutate({ date, city: city.city })}>
+                      {city.city} only
+                    </DropdownMenuItem>
+                  ))}
+                <DropdownMenuItem onClick={() => downloadPdf.mutate({ date })}>All cities</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardContent>
       </Card>

@@ -14,12 +14,19 @@ export function usePoLookup(date: string) {
   });
 }
 
-/** The same day as a printable prep sheet — every city in one PDF. */
+/**
+ * The same day as a printable prep sheet. Without a city it prints every city in one PDF; with
+ * one, just that kitchen's sheet.
+ */
 export function usePoLookupPdfDownload() {
   return useMutation({
-    mutationFn: async (date: string) => {
-      const res = await apiClient.get('/po-lookup/pdf', { params: { date }, responseType: 'blob' });
-      triggerBlobDownload(res.data as Blob, `po-lookup-${date}.pdf`);
+    mutationFn: async ({ date, city }: { date: string; city?: string }) => {
+      const res = await apiClient.get('/po-lookup/pdf', {
+        params: { date, ...(city ? { city } : {}) },
+        responseType: 'blob',
+      });
+      const slug = city ? `-${city.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` : '';
+      triggerBlobDownload(res.data as Blob, `po-lookup${slug}-${date}.pdf`);
     },
     onError: () => toast.error('Failed to generate PDF'),
   });
