@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 4100",
+    "dev": "next dev -p 4200",
     "build": "next build || (echo 'Build failed - clearing Turbopack cache, retrying once' && rm -rf .next/cache && next build)",
-    "start": "next start -p 4100",
+    "start": "next start -p 4200",
     "lint": "eslint"
   },
   "dependencies": {

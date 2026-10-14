@@ -128,7 +128,7 @@ These live in `components/dashboard/*` and use `useIsMobile()`.
 
 ## Verification
 1. **Static checks:** run `npm run lint -w frontend` and `npm run build -w frontend`. The build type-checks and must pass.
-2. **Run the app:** `npm run dev -w frontend`, then open http://localhost:4100.
+2. **Run the app:** `npm run dev -w frontend`, then open http://localhost:4200.
 3. **Test in Chrome DevTools device mode** at these widths:
    - 320 (iPhone SE 1st gen)
    - 360 (Android)

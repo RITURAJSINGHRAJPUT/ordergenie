@@ -8,7 +8,7 @@ Status: **Implemented** (2026-08-13) — `backend/src/combinedServer.ts` exists,
 
 Confirmed this is a well-supported pattern: Next.js 16's own docs (`node_modules/next/dist/docs/01-app/02-guides/custom-server.md`) document exactly this — `next({dev, dir})` + `app.getRequestHandler()` — as the supported way to embed Next.js inside an existing Node/Express backend. The only hard constraint is that `next.config.ts` must **not** set `output: 'standalone'` (custom servers and standalone output are mutually exclusive) — confirmed it currently doesn't.
 
-**Local dev is unaffected** — it stays exactly as-is (`npm run dev` at root, two separate processes on :4100/:4101 via `concurrently`, full hot reload). This combined server is a new, additional **production-only** entrypoint used solely for the single-Render-service deployment; nothing about the day-to-day dev workflow changes.
+**Local dev is unaffected** — it stays exactly as-is (`npm run dev` at root, two separate processes on :4200/:4201 via `concurrently`, full hot reload). This combined server is a new, additional **production-only** entrypoint used solely for the single-Render-service deployment; nothing about the day-to-day dev workflow changes.
 
 ## Approach
 

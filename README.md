@@ -30,7 +30,7 @@ cp frontend/.env.local.example frontend/.env.local
 npm run db:migrate
 npm run db:seed
 
-# 5. Start both apps (backend on :4101, frontend on :4100)
+# 5. Start both apps (backend on :4201, frontend on :4200)
 npm run dev
 ```
 
