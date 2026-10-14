@@ -33,6 +33,8 @@ export function allowedSettingsTabsFor(user: { role?: Role; pageGrants?: string[
   if (user.pageGrants?.includes(SALES_FORECAST_GRANT)) return [SALES_FORECAST_TAB];
   if (user.role === 'VIEWER') return TABS.filter((t) => VIEWER_TABS.has(t.href)).map((t) => t.href);
   if (user.role === 'ADMIN') return [];
+  // Explicit, because the fall-through below hands any unlisted role a working Notifications tab.
+  if (user.role === 'PREP_KITCHEN') return [];
   return ['/settings/notifications'];
 }
 

@@ -17,6 +17,7 @@ enum RoleName {
   OUTLET_MANAGER
   HEAD_CHEF
   VIEWER
+  PREP_KITCHEN
 }
 
 enum OutletType {

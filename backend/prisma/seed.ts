@@ -44,6 +44,7 @@ async function seedRolesAndAdmin() {
     MANAGEMENT: 'Dashboards, outlet comparison, report exports',
     OUTLET_MANAGER: 'Single assigned outlet: sales, inventory, purchase orders',
     HEAD_CHEF: 'Single assigned outlet: enter daily Opening/Actual Closing on Reconciliation only',
+    PREP_KITCHEN: 'Prep kitchen team: the PO Lookup prep list and nothing else',
     VIEWER:
       'Read-only access across all outlets — no create/edit/delete, and no visibility into Users, Roles, Notifications, or Sync Schedule',
   };

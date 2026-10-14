@@ -82,22 +82,31 @@ export const NAV_ITEMS: NavItem[] = [
 ];
 
 const HEAD_CHEF_LABELS = new Set(['Reconciliation', 'Sold Out', 'Wastage Management']);
-/** Top-level pages a Head Chef may reach, on top of the brand-section pages above. */
-const HEAD_CHEF_TOP_LEVEL = new Set(['Dashboard', 'PO Lookup']);
 
 /**
- * Head Chef is a narrow role — everything except Dashboard and each brand
- * section's daily-entry pages (Reconciliation, Sold Out, Wastage Management)
- * is hidden (the backend also 403s those routes; this is just the matching
- * nav view, an allowlist rather than a per-item flag so a newly added nav
- * item defaults to hidden from this role).
+ * Roles narrow enough to be described by what they *may* see rather than what they may not.
+ *
+ * `top` is the top-level labels; `children` the brand-section pages (absent = no brand sections).
+ * An allowlist, so a nav item added later is hidden from these roles until someone decides it
+ * shouldn't be — the opposite of the default below, which hands any unlisted role the full nav.
  */
-function filterForHeadChef(items: NavItem[]): NavItem[] {
+const RESTRICTED_ROLE_NAV: Partial<Record<Role, { top: Set<string>; children?: Set<string> }>> = {
+  HEAD_CHEF: { top: new Set(['Dashboard', 'PO Lookup']), children: HEAD_CHEF_LABELS },
+  PREP_KITCHEN: { top: new Set(['PO Lookup']) },
+};
+
+/** Where a role lands after signing in: the first page it is actually allowed to open. */
+export function landingPathFor(role: Role | undefined): string {
+  return role === 'PREP_KITCHEN' ? '/po-lookup' : '/dashboard';
+}
+
+/** Narrows the nav to the labels a restricted role may see, sections and children alike. */
+function filterForRestrictedRole(items: NavItem[], allowed: { top: Set<string>; children?: Set<string> }): NavItem[] {
   return items
-    .filter((item) => (item.href ? HEAD_CHEF_TOP_LEVEL.has(item.label) : Boolean(item.children)))
+    .filter((item) => (item.href ? allowed.top.has(item.label) : Boolean(item.children) && Boolean(allowed.children)))
     .map((item) =>
-      item.children
-        ? { ...item, children: item.children.filter((child) => HEAD_CHEF_LABELS.has(child.label)) }
+      item.children && allowed.children
+        ? { ...item, children: item.children.filter((child) => allowed.children!.has(child.label)) }
         : item
     );
 }
@@ -126,7 +135,8 @@ export function visibleNavItems({
   // Settings itself is SUPER_ADMIN-only now, except VIEWER's long-standing read-only tabs and
   // anyone holding a page grant, who needs the entry point to reach their one tab.
   const canOpenSettings = role === 'SUPER_ADMIN' || isViewer || pageGrants.length > 0;
-  const base = role === 'HEAD_CHEF' ? filterForHeadChef(NAV_ITEMS) : NAV_ITEMS;
+  const restricted = role ? RESTRICTED_ROLE_NAV[role] : undefined;
+  const base = restricted ? filterForRestrictedRole(NAV_ITEMS, restricted) : NAV_ITEMS;
 
   return base
     .filter((item) => !item.brand || !allowedBrands || allowedBrands.includes(item.brand))

@@ -1,4 +1,11 @@
-export type Role = 'SUPER_ADMIN' | 'ADMIN' | 'MANAGEMENT' | 'OUTLET_MANAGER' | 'HEAD_CHEF' | 'VIEWER';
+export type Role =
+  | 'SUPER_ADMIN'
+  | 'ADMIN'
+  | 'MANAGEMENT'
+  | 'OUTLET_MANAGER'
+  | 'HEAD_CHEF'
+  | 'VIEWER'
+  | 'PREP_KITCHEN';
 
 /** The only page that can be granted per-user today (see requirePageGrant on the backend). */
 export const SALES_FORECAST_GRANT = 'sales-forecast';

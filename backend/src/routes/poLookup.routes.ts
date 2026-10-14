@@ -16,7 +16,8 @@ router.use(
     RoleName.MANAGEMENT,
     RoleName.OUTLET_MANAGER,
     RoleName.HEAD_CHEF,
-    RoleName.VIEWER
+    RoleName.VIEWER,
+    RoleName.PREP_KITCHEN
   )
 );
 

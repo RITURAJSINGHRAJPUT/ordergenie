@@ -24,7 +24,10 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!token || !isReady) return;
     if (!isRouteAllowed(pathname, items)) {
-      router.replace('/dashboard');
+      // The first page this user may actually open, not a hard-coded /dashboard: a role without
+      // Dashboard would otherwise be redirected to a page this same guard then rejects, over and
+      // over, while that page quietly loaded its data.
+      router.replace(items[0]?.href ?? items[0]?.children?.[0]?.href ?? '/login');
     }
   }, [token, isReady, items, pathname, router]);
 

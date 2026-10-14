@@ -13,19 +13,20 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { apiClient } from '@/lib/api-client';
 import { useAuthStore } from '@/store/authStore';
+import { landingPathFor } from '@/components/layout/nav-items';
 import { loginSchema, type LoginInput } from '@/schemas/login.schema';
 import type { ApiEnvelope, LoginResponse } from '@/types/api';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { token, isHydrated, login: setAuth } = useAuthStore();
+  const { token, user, isHydrated, login: setAuth } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (isHydrated && token) {
-      router.replace('/dashboard');
+      router.replace(landingPathFor(user?.role));
     }
-  }, [isHydrated, token, router]);
+  }, [isHydrated, token, user?.role, router]);
 
   const {
     register,
@@ -46,7 +47,9 @@ export default function LoginPage() {
     onSuccess: (data) => {
       setAuth(data.token, data.user);
       toast.success(`Welcome back, ${data.user.name}`);
-      router.replace('/dashboard');
+      // Not every role may open the Dashboard — a prep kitchen login would be bounced straight
+      // back out of it by the protected layout's guard.
+      router.replace(landingPathFor(data.user.role));
     },
     onError: () => {
       toast.error('Invalid email or password');
