@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { Download } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { usePoLookup } from '@/hooks/usePoLookup';
+import { usePoLookup, usePoLookupPdfDownload } from '@/hooks/usePoLookup';
 import { formatDate, formatNumber } from '@/lib/format';
 import type { PoLookupCity } from '@/types/api';
 
@@ -20,6 +22,8 @@ export default function PoLookupPage() {
   // Prep is done the day before delivery, so tomorrow is the day someone opens this for.
   const [date, setDate] = useState(tomorrowIso());
   const { data, isLoading, isError } = usePoLookup(date);
+  const downloadPdf = usePoLookupPdfDownload();
+  const hasRows = (data ?? []).some((city) => city.rows.length > 0);
 
   return (
     <div className="space-y-4">
@@ -33,15 +37,25 @@ export default function PoLookupPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-1">
-            <Label htmlFor="po-lookup-date">Delivery date</Label>
-            <Input
-              id="po-lookup-date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-[180px]"
-            />
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="po-lookup-date">Delivery date</Label>
+              <Input
+                id="po-lookup-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-[180px]"
+              />
+            </div>
+            <Button
+              variant="outline"
+              disabled={!hasRows || downloadPdf.isPending}
+              onClick={() => downloadPdf.mutate(date)}
+            >
+              <Download className="mr-1 h-4 w-4" />
+              {downloadPdf.isPending ? 'Preparing…' : 'Download PDF'}
+            </Button>
           </div>
         </CardContent>
       </Card>

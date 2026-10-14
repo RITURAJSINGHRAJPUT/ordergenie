@@ -200,3 +200,100 @@ export function toPurchaseOrderPdf(po: PurchaseOrderPdfData): Promise<Buffer> {
     doc.end();
   });
 }
+
+export interface PoLookupPdfCity {
+  city: string;
+  outlets: { id: string; name: string }[];
+  rows: { itemName: string; unit: string | null; byOutlet: Record<string, number>; total: number }[];
+}
+
+/**
+ * The PO Lookup day as a prep sheet: one table per city, an outlet per column, totals on the
+ * right. Landscape, because a column per outlet plus the item name doesn't fit portrait once a
+ * city has four or more outlets.
+ */
+export function toPoLookupPdf(date: string, cities: PoLookupPdfCity[]): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 36, size: 'A4', layout: 'landscape' });
+    const chunks: Buffer[] = [];
+    doc.on('data', (chunk) => chunks.push(chunk));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const left = doc.page.margins.left;
+    const right = doc.page.width - doc.page.margins.right;
+    const fullWidth = right - left;
+    const num = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2));
+
+    doc.font('Helvetica-Bold').fontSize(16).text('PO Lookup', left, doc.y);
+    doc.font('Helvetica').fontSize(10).fillColor('#666').text(`Purchase orders due ${date}`, left, doc.y + 2);
+    doc.fillColor('#000');
+    doc.moveDown(1);
+
+    for (const city of cities) {
+      // Keep a city's heading with at least its header row rather than stranding it at the foot.
+      if (doc.y > doc.page.height - doc.page.margins.bottom - 90) doc.addPage();
+
+      doc.font('Helvetica-Bold').fontSize(12).text(city.city, left, doc.y);
+      doc.font('Helvetica').fontSize(8).fillColor('#666').text(city.outlets.map((o) => o.name).join('  ·  '), left, doc.y + 2);
+      doc.fillColor('#000');
+      doc.moveDown(0.6);
+
+      if (city.rows.length === 0) {
+        doc.font('Helvetica').fontSize(9).text('No purchase orders due on this date.', left, doc.y);
+        doc.moveDown(1);
+        continue;
+      }
+
+      const unitWidth = 46;
+      const totalWidth = 60;
+      // Item names rarely need more than this; the slack goes to the outlet columns so the
+      // numbers stay near their headings instead of drifting to the far edge of a landscape page.
+      const itemWidth = Math.min(260, fullWidth - unitWidth - totalWidth - 70 * city.outlets.length);
+      const outletWidth = (fullWidth - itemWidth - unitWidth - totalWidth) / Math.max(1, city.outlets.length);
+      const widths = [itemWidth, unitWidth, ...city.outlets.map(() => outletWidth), totalWidth];
+      const headers = ['Item', 'Unit', ...city.outlets.map((o) => o.name), 'Total'];
+
+      const drawRow = (values: string[], bold: boolean) => {
+        const top = doc.y;
+        let x = left;
+        values.forEach((v, i) => {
+          doc
+            .font(bold ? 'Helvetica-Bold' : 'Helvetica')
+            .fontSize(8.5)
+            .text(v, x, top, { width: widths[i] - 4, align: i === 0 ? 'left' : i === 1 ? 'left' : 'right', ellipsis: true });
+          x += widths[i];
+        });
+        doc.y = top + 15;
+      };
+
+      const drawHeader = () => {
+        drawRow(headers, true);
+        doc.moveTo(left, doc.y - 4).lineTo(right, doc.y - 4).stroke();
+        doc.moveDown(0.2);
+      };
+
+      drawHeader();
+      for (const row of city.rows) {
+        if (doc.y > doc.page.height - doc.page.margins.bottom - 30) {
+          doc.addPage();
+          drawHeader();
+        }
+        drawRow(
+          [
+            row.itemName,
+            row.unit ?? '—',
+            ...city.outlets.map((o) => (row.byOutlet[o.id] ? num(row.byOutlet[o.id]) : '—')),
+            num(row.total),
+          ],
+          false
+        );
+      }
+
+      doc.moveTo(left, doc.y).lineTo(right, doc.y).stroke();
+      doc.moveDown(1.2);
+    }
+
+    doc.end();
+  });
+}

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { RoleName } from '@prisma/client';
 import { verifyJwt } from '../middleware/auth.middleware';
 import { requireRole } from '../middleware/rbac.middleware';
-import { poLookupHandler } from '../controllers/poLookup.controller';
+import { poLookupHandler, poLookupPdfHandler } from '../controllers/poLookup.controller';
 
 const router = Router();
 
@@ -20,6 +20,7 @@ router.use(
   )
 );
 
+router.get('/pdf', poLookupPdfHandler);
 router.get('/', poLookupHandler);
 
 export default router;
