@@ -18,6 +18,7 @@ import predictedSalesRoutes from './predictedSales.routes';
 import soldOutRoutes from './soldOut.routes';
 import activityLogRoutes from './activityLog.routes';
 import alertsRoutes from './alerts.routes';
+import poLookupRoutes from './poLookup.routes';
 
 const router = Router();
 
@@ -40,5 +41,6 @@ router.use('/predicted-sales', predictedSalesRoutes);
 router.use('/sold-out', soldOutRoutes);
 router.use('/activity-logs', activityLogRoutes);
 router.use('/alerts', alertsRoutes);
+router.use('/po-lookup', poLookupRoutes);
 
 export default router;

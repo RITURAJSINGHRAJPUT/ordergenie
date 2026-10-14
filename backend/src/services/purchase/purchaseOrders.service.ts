@@ -26,8 +26,11 @@ export interface PurchaseOrderQuery {
  * Which date a PO list is filtered on. `expectedDate` is the "when is it due to arrive"
  * view (matching how Reconciliation attributes POs) — but 41% of POs reach us without one,
  * so those fall back to their order date rather than disappearing from every date.
+ *
+ * Exported because PO Lookup totals a city's orders for a delivery day and has to answer
+ * "is this PO due today?" exactly as these lists do.
  */
-function dateClause(dateField: string | undefined, from: Date, to: Date): Prisma.PurchaseOrderWhereInput {
+export function dateClause(dateField: string | undefined, from: Date, to: Date): Prisma.PurchaseOrderWhereInput {
   if (dateField === 'petpoojaCreatedAt') return { petpoojaCreatedAt: { gte: from, lte: to } };
   if (dateField === 'expectedDate') {
     return {

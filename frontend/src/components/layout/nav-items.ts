@@ -15,6 +15,7 @@ import {
   Star,
   Sigma,
   Trash2,
+  ClipboardCheck,
   Scale,
   TrendingUp,
   PackageX,
@@ -74,12 +75,15 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Item Sales', href: '/item-sales', icon: UtensilsCrossed },
   { label: 'Inventory', href: '/inventory', icon: Boxes },
   { label: 'Purchase Orders', href: '/purchase-orders', icon: ClipboardList },
+  { label: 'PO Lookup', href: '/po-lookup', icon: ClipboardCheck },
   { label: 'Outlets', href: '/outlets', icon: Store },
   { label: 'Reports', href: '/reports', icon: FileBarChart },
   { label: 'Settings', href: '/settings', icon: Settings, adminOnly: true },
 ];
 
 const HEAD_CHEF_LABELS = new Set(['Reconciliation', 'Sold Out', 'Wastage Management']);
+/** Top-level pages a Head Chef may reach, on top of the brand-section pages above. */
+const HEAD_CHEF_TOP_LEVEL = new Set(['Dashboard', 'PO Lookup']);
 
 /**
  * Head Chef is a narrow role — everything except Dashboard and each brand
@@ -90,7 +94,7 @@ const HEAD_CHEF_LABELS = new Set(['Reconciliation', 'Sold Out', 'Wastage Managem
  */
 function filterForHeadChef(items: NavItem[]): NavItem[] {
   return items
-    .filter((item) => item.href === '/dashboard' || item.children)
+    .filter((item) => (item.href ? HEAD_CHEF_TOP_LEVEL.has(item.label) : Boolean(item.children)))
     .map((item) =>
       item.children
         ? { ...item, children: item.children.filter((child) => HEAD_CHEF_LABELS.has(child.label)) }

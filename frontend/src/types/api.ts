@@ -502,3 +502,17 @@ export interface MissingClosingRow {
   filled: number;
   missing: number;
 }
+
+export interface PoLookupRow {
+  itemName: string;
+  unit: string | null;
+  /** outletId -> quantity ordered; outlets that ordered none are absent. */
+  byOutlet: Record<string, number>;
+  total: number;
+}
+
+export interface PoLookupCity {
+  city: string;
+  outlets: { id: string; name: string }[];
+  rows: PoLookupRow[];
+}
